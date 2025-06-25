@@ -1,138 +1,164 @@
-// main.c
+/**
+ * main.c - servidor proxy socks concurrente
+ *
+ * Interpreta los argumentos de línea de comandos, y monta un socket
+ * pasivo.
+ *
+ * Todas las conexiones entrantes se manejarán en éste hilo.
+ *
+ * Se descargará en otro hilos las operaciones bloqueantes (resolución de
+ * DNS utilizando getaddrinfo), pero toda esa complejidad está oculta en
+ * el selector.
+ */
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include <stdlib.h>
+#include <limits.h>
 #include <errno.h>
 #include <signal.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <unistd.h>
+#include <sys/types.h>   // socket
+#include <sys/socket.h>  // socket
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 
-#include "args.h"
+#include "socks5.h"
+#include "selector.h"
+//#include "socks5nio.h"
 
-#define BUFFER_SIZE 1024
-#define MAX_CLIENTS  FD_SETSIZE
+static bool done = false;
 
-static int
-make_listener(const char *addr, unsigned short port)
-{
-    int fd, on = 1;
-    struct sockaddr_in sa = {
-            .sin_family = AF_INET,
-            .sin_port   = htons(port),
-    };
-
-    if (inet_pton(AF_INET, addr, &sa.sin_addr) != 1) {
-        perror("inet_pton");
-        exit(EXIT_FAILURE);
-    }
-
-    if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("socket");
-        exit(EXIT_FAILURE);
-    }
-
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
-        perror("setsockopt");
-        close(fd);
-        exit(EXIT_FAILURE);
-    }
-
-    if (bind(fd, (struct sockaddr*)&sa, sizeof(sa)) < 0) {
-        perror("bind");
-        close(fd);
-        exit(EXIT_FAILURE);
-    }
-
-    if (listen(fd, SOMAXCONN) < 0) {
-        perror("listen");
-        close(fd);
-        exit(EXIT_FAILURE);
-    }
-
-    return fd;
+static void sigterm_handler(const int signal) {
+    printf("signal %d, cleaning up and exiting\n", signal);
+    done = true;
 }
 
-int
-main(int argc, char *argv[])
-{
-    struct socks5args args;
-    fd_set  master_fds, read_fds;
-    int     fdmax, socks_fd, mng_fd;
-    char    buffer[BUFFER_SIZE];
+int main(const int argc, const char** argv) {
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stderr, NULL, _IONBF, 0);
+    unsigned port = 1080;
 
-    parse_args(argc, argv, &args);
+    if (argc == 1) {
+        // utilizamos el default
+    } else if (argc == 2) {
+        char* end = 0;
+        const long sl = strtol(argv[1], &end, 10);
 
-    socks_fd = make_listener(args.socks_addr, args.socks_port);
-    printf("SOCKS listener on %s:%u\n",
-           args.socks_addr, args.socks_port);
-
-    mng_fd   = make_listener(args.mng_addr, args.mng_port);
-    printf("Management listener on %s:%u  dissectors %s\n",
-           args.mng_addr, args.mng_port,
-           args.disectors_enabled ? "ON" : "OFF");
-
-    FD_ZERO(&master_fds);
-    FD_SET(socks_fd, &master_fds);
-    FD_SET(mng_fd,   &master_fds);
-
-    fdmax = (socks_fd > mng_fd ? socks_fd : mng_fd);
-
-    while(1) {
-        read_fds = master_fds;
-        if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) < 0) {
-            if (errno == EINTR) continue;
-            perror("select");
-            break;
+        if (end == argv[1] || '\0' != *end || ((LONG_MIN == sl || LONG_MAX == sl) && ERANGE == errno) || sl < 0 || sl > USHRT_MAX) {
+            fprintf(stderr, "port should be an integer: %s\n", argv[1]);
+            return 1;
         }
-
-        for (int fd = 0; fd <= fdmax; fd++) {
-            if (!FD_ISSET(fd, &read_fds)) continue;
-
-            if (fd == socks_fd || fd == mng_fd) {
-                struct sockaddr_in peer;
-                socklen_t len = sizeof(peer);
-                int new_fd = accept(fd, (struct sockaddr*)&peer, &len);
-                if (new_fd < 0) {
-                    perror("accept");
-                    continue;
-                }
-                FD_SET(new_fd, &master_fds);
-                if (new_fd > fdmax) fdmax = new_fd;
-                printf("New %s connection on socket %d from %s:%u\n",
-                       fd == socks_fd ? "SOCKS" : "MGMT",
-                       new_fd,
-                       inet_ntoa(peer.sin_addr),
-                       ntohs(peer.sin_port));
-            } else {
-//                DESDE ACA ES LO QUE SE DEBE CAMBIAR
-                ssize_t n = recv(fd, buffer, sizeof(buffer)-1, 0);
-                if (n <= 0) {
-                    if (n == 0) {
-                        printf("Socket %d closed by peer\n", fd);
-                    } else {
-                        perror("recv");
-                    }
-                    close(fd);
-                    FD_CLR(fd, &master_fds);
-                } else {
-                    buffer[n] = '\0';
-                    printf("Received on %d: %s\n", fd, buffer);
-                    if (fd != mng_fd) {
-                        if (write(fd, buffer, n) < 0)
-                            perror("write");
-                    }
-                }
-//                HASTA ACA ES LO QUE SE DEBE CAMBIAR
-
-            }
-        }
+        port = sl;
+    } else {
+        fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+        return 1;
     }
 
-    close(socks_fd);
-    close(mng_fd);
-    return 0;
+    // no tenemos nada que leer de stdin
+    close(0);
+
+    const char* err_msg = NULL;
+    selector_status ss = SELECTOR_SUCCESS;
+    fd_selector selector = NULL;
+
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons(port);
+
+    const int server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (server < 0) {
+        err_msg = "unable to create socket";
+        goto finally;
+    }
+
+    fprintf(stdout, "Listening on TCP port %d\n", port);
+
+    // man 7 ip. no importa reportar nada si falla.
+    setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+
+    if (bind(server, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        err_msg = "unable to bind socket";
+        goto finally;
+    }
+
+    if (listen(server, 20) < 0) {
+        err_msg = "unable to listen";
+        goto finally;
+    }
+
+    // registrar sigterm es útil para terminar el programa normalmente.
+    // esto ayuda mucho en herramientas como valgrind.
+    signal(SIGTERM, sigterm_handler);
+    signal(SIGINT, sigterm_handler);
+
+    if (selector_fd_set_nio(server) == -1) {
+        err_msg = "getting server socket flags";
+        goto finally;
+    }
+    const struct selector_init conf = {
+        .signal = SIGALRM,
+        .select_timeout = {
+            .tv_sec = 10,
+            .tv_nsec = 0,
+        },
+    };
+    if (0 != selector_init(&conf)) {
+        err_msg = "initializing selector";
+        goto finally;
+    }
+
+    selector = selector_new(1024);
+    if (selector == NULL) {
+        err_msg = "unable to create selector";
+        goto finally;
+    }
+    const struct fd_handler socksv5 = {
+        .handle_read = socksv5_passive_accept,
+        .handle_write = NULL,
+        .handle_close = NULL, // nada que liberar
+    };
+    ss = selector_register(selector, server, &socksv5, OP_READ, NULL);
+    if (ss != SELECTOR_SUCCESS) {
+        err_msg = "registering fd";
+        goto finally;
+    }
+    while (!done) {
+        err_msg = NULL;
+        ss = selector_select(selector);
+        if (ss != SELECTOR_SUCCESS) {
+            err_msg = "serving";
+            goto finally;
+        }
+    }
+    if (err_msg == NULL) {
+        err_msg = "closing";
+    }
+
+    int ret = 0;
+finally:
+    if (ss != SELECTOR_SUCCESS) {
+        fprintf(stderr, "%s: %s\n", (err_msg == NULL) ? "" : err_msg,
+                ss == SELECTOR_IO
+                    ? strerror(errno)
+                    : selector_error(ss));
+        ret = 2;
+    } else if (err_msg) {
+        perror(err_msg);
+        ret = 1;
+    }
+    if (selector != NULL) {
+        selector_destroy(selector);
+    }
+    selector_close();
+
+    // socksv5_pool_destroy();
+
+    if (server >= 0) {
+        close(server);
+    }
+    return ret;
 }

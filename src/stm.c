@@ -23,6 +23,7 @@ stm_init(struct state_machine *stm) {
     }
 }
 
+
 inline static void
 handle_first(struct state_machine *stm, struct selector_key *key) {
     if(stm->current == NULL) {
