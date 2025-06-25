@@ -1,118 +1,138 @@
-#include <netinet/in.h>
-#include <arpa/inet.h>
+// main.c
 #include <stdio.h>
 #include <stdlib.h>
-#include "selector.h"
-#include "buffer.h"
-#include "netutils.h"
-#include "parser.h"
-#include "parser_utils.h"
-#include "stm.h"
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <signal.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
+#include "args.h"
 
-
-
-#define PORT 8080
 #define BUFFER_SIZE 1024
-#define MAX_CLIENTS 30
+#define MAX_CLIENTS  FD_SETSIZE
 
-int main(){
-    int server_fd, new_socket;
-    struct sockaddr_in server_addr;
-    char buffer[BUFFER_SIZE];
+static int
+make_listener(const char *addr, unsigned short port)
+{
+    int fd, on = 1;
+    struct sockaddr_in sa = {
+            .sin_family = AF_INET,
+            .sin_port   = htons(port),
+    };
 
-    fd_set read_fds;
-    fd_set master_fds;
-    int fdmax;
-
-    if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("Socket creation failed");
+    if (inet_pton(AF_INET, addr, &sa.sin_addr) != 1) {
+        perror("inet_pton");
         exit(EXIT_FAILURE);
     }
 
-    int opt = 1;
-    if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
-        perror("setsockopt failed");
-        close(server_fd);
+    if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("socket");
         exit(EXIT_FAILURE);
     }
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(PORT);
-
-    if(bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        perror("Bind failed");
-        close(server_fd);
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
+        perror("setsockopt");
+        close(fd);
         exit(EXIT_FAILURE);
     }
 
-    //Aca no se si seria max clients
-    if(listen(server_fd, MAX_CLIENTS) == -1) {
-        perror("Listen failed");
-        close(server_fd);
+    if (bind(fd, (struct sockaddr*)&sa, sizeof(sa)) < 0) {
+        perror("bind");
+        close(fd);
         exit(EXIT_FAILURE);
     }
+
+    if (listen(fd, SOMAXCONN) < 0) {
+        perror("listen");
+        close(fd);
+        exit(EXIT_FAILURE);
+    }
+
+    return fd;
+}
+
+int
+main(int argc, char *argv[])
+{
+    struct socks5args args;
+    fd_set  master_fds, read_fds;
+    int     fdmax, socks_fd, mng_fd;
+    char    buffer[BUFFER_SIZE];
+
+    parse_args(argc, argv, &args);
+
+    socks_fd = make_listener(args.socks_addr, args.socks_port);
+    printf("SOCKS listener on %s:%u\n",
+           args.socks_addr, args.socks_port);
+
+    mng_fd   = make_listener(args.mng_addr, args.mng_port);
+    printf("Management listener on %s:%u  dissectors %s\n",
+           args.mng_addr, args.mng_port,
+           args.disectors_enabled ? "ON" : "OFF");
 
     FD_ZERO(&master_fds);
-    FD_ZERO(&read_fds);
+    FD_SET(socks_fd, &master_fds);
+    FD_SET(mng_fd,   &master_fds);
 
-    FD_SET(server_fd, &master_fds);
-    fdmax = server_fd;
-
-    printf("Server listening on port %d\n", PORT);
+    fdmax = (socks_fd > mng_fd ? socks_fd : mng_fd);
 
     while(1) {
         read_fds = master_fds;
-
-        if(select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
-            perror("Select failed");
-            exit(EXIT_FAILURE);
+        if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) < 0) {
+            if (errno == EINTR) continue;
+            perror("select");
+            break;
         }
 
-        for(int i = 0; i <= fdmax; i++) {
-            if(FD_ISSET(i, &read_fds)) {
+        for (int fd = 0; fd <= fdmax; fd++) {
+            if (!FD_ISSET(fd, &read_fds)) continue;
 
-                if(i == server_fd) {
-                    struct sockaddr_in client_addr;
-                    socklen_t client_addr_len = sizeof(client_addr);
-                    new_socket = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len);
-
-                    if(new_socket == -1) {
-                        perror("Accept failed");
+            if (fd == socks_fd || fd == mng_fd) {
+                struct sockaddr_in peer;
+                socklen_t len = sizeof(peer);
+                int new_fd = accept(fd, (struct sockaddr*)&peer, &len);
+                if (new_fd < 0) {
+                    perror("accept");
+                    continue;
+                }
+                FD_SET(new_fd, &master_fds);
+                if (new_fd > fdmax) fdmax = new_fd;
+                printf("New %s connection on socket %d from %s:%u\n",
+                       fd == socks_fd ? "SOCKS" : "MGMT",
+                       new_fd,
+                       inet_ntoa(peer.sin_addr),
+                       ntohs(peer.sin_port));
+            } else {
+//                DESDE ACA ES LO QUE SE DEBE CAMBIAR
+                ssize_t n = recv(fd, buffer, sizeof(buffer)-1, 0);
+                if (n <= 0) {
+                    if (n == 0) {
+                        printf("Socket %d closed by peer\n", fd);
                     } else {
-                        FD_SET(new_socket, &master_fds);
-                        if(new_socket > fdmax) {
-                            fdmax = new_socket;
-                        }
-                        char client_ip[INET_ADDRSTRLEN];
-                        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
-                        printf("New connection from %s:%d on socket %d\n",client_ip, ntohs(client_addr.sin_port), new_socket);
+                        perror("recv");
+                    }
+                    close(fd);
+                    FD_CLR(fd, &master_fds);
+                } else {
+                    buffer[n] = '\0';
+                    printf("Received on %d: %s\n", fd, buffer);
+                    if (fd != mng_fd) {
+                        if (write(fd, buffer, n) < 0)
+                            perror("write");
                     }
                 }
-                else {
-                    ssize_t nbytes;
-                    if((nbytes = recv(i, buffer, sizeof(buffer) - 1, 0)) <= 0) {
-                        if(nbytes == 0) {
-                            printf("Socket %d disconnected\n", i);
-                        } else {
-                            perror("Recv failed");
-                        }
-                        close(i);
-                        FD_CLR(i, &master_fds);
-                    } else {
-                        printf("Received data on socket %d: %.*s\n", i, (int)nbytes, buffer);
-                        if(write(i, buffer, nbytes) < 0) {
-                            perror("Write failed");
-                        }
-
-                    }
-                }
+//                HASTA ACA ES LO QUE SE DEBE CAMBIAR
 
             }
         }
     }
 
-
+    close(socks_fd);
+    close(mng_fd);
+    return 0;
 }

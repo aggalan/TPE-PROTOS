@@ -1,20 +1,30 @@
 /**
  * selector.c - un muliplexor de entrada salida
  */
-#include <stdio.h>  // perror
-#include <stdlib.h> // malloc
-#include <string.h> // memset
-#include <assert.h> // :)
-#include <errno.h>  // :)
-#include <pthread.h>
+/**
+ * selector.c - un multiplexor de entrada salida
+ */
 
-#include <stdint.h> // SIZE_MAX
+/* 1) Expose POSIX.1-2001 and XSI APIs */
+#define _POSIX_C_SOURCE 200112L
+#define _XOPEN_SOURCE    700
+
+/* 2) Pull in the right headers */
+#include <signal.h>    // sigemptyset, sigaddset, sigprocmask, sigaction
+#include <pthread.h>   // pthread_kill, pthread_self
+
+#include <stdio.h>     // perror
+#include <stdlib.h>    // malloc
+#include <string.h>    // memset
+#include <assert.h>
+#include <errno.h>
+#include <stdint.h>    // SIZE_MAX
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
-#include <sys/signal.h>
+
 #include "selector.h"
 
 #define N(x) (sizeof(x)/sizeof((x)[0]))
