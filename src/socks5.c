@@ -24,29 +24,6 @@
 #include "./greeting/greeting.h"
 
 
-enum socks_v5state {
-    GREETING,
-    DONE,
-    ERROR,
-};
-
-
-struct socks5 {
-    int                        client_fd;
-    int                        origin_fd;
-
-    buffer *                    read_buffer;
-    buffer *                    write_buffer;
-
-    struct {
-        struct hello_st        hello;
-    } client;
-
-    struct state_machine       stm;
-    struct sockaddr_storage    client_addr;
-    socklen_t                  client_addr_len;
-};
-
 
 
 
@@ -59,7 +36,11 @@ static const struct fd_handler socks5_handler = {
     .handle_close = socksv5_close,
 };
 
-struct socks5 *socks5_new(const int client_fd)
+
+
+struct socks5 *socks5_new(const int client_fd,
+                           const struct sockaddr_storage *client_addr,
+                           const socklen_t client_addr_len))
 {
     struct socks5 *ret = calloc(1, sizeof(*ret));
     if (ret == NULL)
@@ -69,10 +50,21 @@ struct socks5 *socks5_new(const int client_fd)
 
     ret->client_fd = client_fd;
     ret->origin_fd = -1;
+    ret->client_addr = client_addr;
+    ret->client_addr_len = client_addr_len;
+
 
     static uint8_t r_buffer[BUFFER_SIZE], w_buffer[BUFFER_SIZE];
     buffer_init(&ret->read_buffer, BUFFER_SIZE, r_buffer);
     buffer_init(&ret->write_buffer, BUFFER_SIZE, w_buffer);
+    ret->stm.initial = GREETING_READ;
+    ret->stm.max_state = ERROR;
+    ret->closed = false;
+    ret->hello = calloc(sizeof(struct hello_st));
+    if (ret->hello == NULL)
+    {
+        goto fail;
+    }
 
     stm_init(&ret->stm);
 
@@ -127,12 +119,22 @@ fail:
 
 static const struct state_definition client_statbl[] = {
         {
-                .state        = GREETING,
+                .state        = GREETING_READ,
                 .on_arrival   = greeting_init,
-                .on_departure = greeting_close,
                 .on_read_ready  = greeting_read,
+        },
+        {
+                .state        = GREETING_WRITE,
                 .on_write_ready = greeting_write,
         },
+        {
+                .state        = DONE,
+                .on_departure = socksv5_done,
+        },
+        {
+                .state        = ERROR,
+                .on_departure = socksv5_done,
+        }
 };
 
 
