@@ -32,7 +32,7 @@ unsigned negotiation_read(struct selector_key *key) {
     buffer_write_adv(&data->read_buffer, read_count);
     negotiation_parse(&data->client.negotiation_parser, &data->read_buffer);
     if (has_negotiation_read_ended(&data->client.negotiation_parser)) {
-        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_negotiation_answer(&data->client.negotiation_parser , &data->read_buffer)) {
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_negotiation_answer(&data->client.negotiation_parser , &data->write_buffer)) {
             printf("Greeting_read selector_set_interest_key failed\n");
             return ERROR;
         }
@@ -72,13 +72,13 @@ unsigned negotiation_write(struct selector_key *key) {
 
     if (USER_PASS == data->client.negotiation_parser.auth_method) {
         printf("User has selected authentication\n");
-        // return AUTHENTICATION_READ
+        return DONE;
     }
 
     printf("User has selected NO authentication\n");
 
     //return REQUEST_READ
-    return OK;
+    return DONE;
 }
 
 

@@ -40,19 +40,14 @@ NegState negotiation_parse(NegParser * p, buffer * buffer){
                 printf("NMETHODS: %d\n", c);
                 break;
             case METHODS:
-                if(p->nmethods > 0) {
-                    if ( c == NO_AUTH ){
+                if (c == USER_PASS) {
+                    p->auth_method = USER_PASS;
+                } else if (c == NO_AUTH) {
+                    if (p->auth_method != USER_PASS)
                         p->auth_method = NO_AUTH;
-                        printf("NO_AUTH_METHOD \n");
-
-                    } else if (c == USER_PASS) {
-                        p->auth_method = USER_PASS;
-                        printf("USER_PASS_METHOD \n");
-                        p->state = END;
-                    }
-                } else {
-                    p->state = FAIL;
                 }
+                if (--p->nmethods == 0)
+                    p->state = END;
                 break;
             case END:
                 return END;
@@ -82,6 +77,7 @@ bool has_negotiation_errors(NegParser * p){
 NegCodes fill_negotiation_answer(NegParser * p, buffer * buffer){
     if (!buffer_can_write(buffer))
         return FULL_BUFFER;
+    printf("Filling negotiation answer... \n");
     buffer_write(buffer, SOCKS_VERSION);
     buffer_write(buffer, p->auth_method);
     return OK;

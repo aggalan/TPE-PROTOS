@@ -17,6 +17,7 @@
 #include "stm.h"
 #include "parser.h"
 #include "./negotiation/negotiation.h"
+#include "./authentication/authentication.h"
 
 #define BUFFER_SIZE 4096
 
@@ -41,6 +42,11 @@ static const struct state_definition client_actions[] = {
 {
     .state        = NEGOTIATION_WRITE,
     .on_write_ready = negotiation_write,
+},
+{
+    .state        = AUTHENTICATION_READ,
+    .on_arrival   = authentication_init,
+    .on_read_ready  = authentication_read,
 },
 {
     .state        = DONE,

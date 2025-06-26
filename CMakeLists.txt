@@ -7,7 +7,6 @@ include_directories(src)
 include_directories(src/negotiation)
 
 add_executable(TPE_PROTOS
-        "src/negotiation/ negotiation_parser.h"
         src/negotiation/negotiation.c
         src/negotiation/negotiation.h
         src/negotiation/negotiation_parser.c
@@ -35,4 +34,8 @@ add_executable(TPE_PROTOS
         src/stm.c
         src/stm.h
         src/stm_test.c
-        src/tests.h)
+        src/tests.h
+        src/authentication/authentication.c
+        src/authentication/authentication.h
+        src/authentication/authentication_parser.c
+        src/authentication/authentication_parser.h)
