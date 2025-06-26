@@ -54,4 +54,5 @@ test: $(TEST_TARGET)
 
 # House-keeping ---------------------------------------------------------
 clean:
-	rm -f $(SRCDIR)/**/*.o $(TARGET) $(TEST_TARGET)
+	find $(SRCDIR) -name '*.o' -delete
+	rm -f $(TARGET) $(TEST_TARGET)

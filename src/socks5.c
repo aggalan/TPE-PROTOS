@@ -170,5 +170,5 @@ static void socksv5_close(struct selector_key *key){
 // }
 
 void socksv5_error(struct selector_key * key) {
-
+    ATTACHMENT(key)->closed = true;
 }

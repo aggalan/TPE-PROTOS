@@ -5,6 +5,9 @@
 #include "buffer.h"
 #include "./greeting/greeting.h"
 #include "stm.h"
+#include <netdb.h>
+#include <stdbool.h>
+#include <sys/socket.h>
 
 enum socks_v5state {
     NEGOTIATION_READ,

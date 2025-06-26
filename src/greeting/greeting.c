@@ -4,9 +4,7 @@
 #include <sys/socket.h>
 
 
-static void
-greeting_init(const unsigned state, struct selector_key *key)
-{
+void greeting_init(const unsigned state,struct selector_key *key) {
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
@@ -15,9 +13,7 @@ greeting_init(const unsigned state, struct selector_key *key)
 
 }
 
-unsigned
-greeting_read(struct selector_key *key)
-{
+unsigned greeting_read(struct selector_key *key) {
     struct socks5 * data = ATTACHMENT(key);
 
     size_t read_size;
@@ -39,8 +35,7 @@ greeting_read(struct selector_key *key)
     return NEGOTIATION_READ;
 }
 
-unsigned greeting_write(struct selector_key *key)
-{
+unsigned greeting_write(struct selector_key *key) {
     struct socks5* data = ATTACHMENT(key);
 
     size_t write_size;
@@ -62,6 +57,8 @@ unsigned greeting_write(struct selector_key *key)
     }
 
     //ver auth method
+
+    return OK;
 }
 
 
