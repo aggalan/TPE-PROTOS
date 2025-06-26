@@ -89,6 +89,7 @@ fail:
 
 
 void socksv5_passive_accept(struct selector_key *key){
+    printf("socksv5_passive_accept\n");
     struct sockaddr_storage client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
     struct socks5 *state = NULL;
@@ -103,6 +104,7 @@ void socksv5_passive_accept(struct selector_key *key){
         goto fail;
     }
     state = socks5_new(client, &client_addr, client_addr_len);
+    printf("accept\n");
     if (state == NULL)
     {
         goto fail;
@@ -114,6 +116,7 @@ void socksv5_passive_accept(struct selector_key *key){
     return;
 
 fail:
+    printf("fail\n");
     if (client != -1)
     {
         close(client);

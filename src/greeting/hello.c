@@ -1,9 +1,7 @@
 #include "hello.h"
 #include <stdint.h>
+#include <stdio.h>
 #include <stddef.h>
-#
-
-#define VERSION_5 0x05
 
 void initNegotiationParser(NegParser * p) {
     if(p == NULL) {
@@ -14,6 +12,7 @@ void initNegotiationParser(NegParser * p) {
 }
 
 NegState negotiationParse(NegParser * p, buffer * buffer){
+    printf("started parsing \n");
     if(p == NULL || buffer == NULL) {
         return FAIL;
     }
@@ -21,12 +20,13 @@ NegState negotiationParse(NegParser * p, buffer * buffer){
         uint8_t c = buffer_read(buffer);
         switch(p->state) {
             case VERSION:
-                if(c == VERSION_5) {
+                if(c == SOCKS_VERSION) {
                     p->version = c;
                     p->state = NUMBER;
                 } else {
                     p->state = FAIL;
                 }
+                printf("version %d\n", c);
                 break;
             case NUMBER:
                 if(c > 0 && c <= METHOD_SIZE) {
@@ -37,6 +37,7 @@ NegState negotiationParse(NegParser * p, buffer * buffer){
                 } else {
                     p->state = FAIL;
                 }
+                printf("number of methods %d\n", c);
                 break;
             case METHODS:
                 if(p->nmethods > 0) {
@@ -46,6 +47,7 @@ NegState negotiationParse(NegParser * p, buffer * buffer){
                         p->auth_method = USER_PASS;
                         p->state = END;
                     }
+                    printf("method %d\n", c);
                 } else {
                     p->state = FAIL;
                 }
@@ -78,7 +80,7 @@ bool hasNegotiationErrors(NegParser * p){
 NegCodes fillNegotiationAnswer(NegParser * p, buffer * buffer){
     if (!buffer_can_write(buffer))
         return FULLBUFFER;
-    buffer_write(buffer, VERSION_5);
+    buffer_write(buffer, SOCKS_VERSION);
     buffer_write(buffer, p->auth_method);
     return OK;
 }

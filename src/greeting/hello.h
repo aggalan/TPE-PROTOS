@@ -4,6 +4,8 @@
 #include "../buffer.h"
 #include <stdint.h>
 
+#define SOCKS_VERSION 0x05
+
 
 typedef enum accepted_methods {
     NO_AUTH = 0x00,
