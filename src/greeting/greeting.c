@@ -45,9 +45,9 @@ greeting_write(struct selector_key *key)
 {
     struct socks5* data = ATTACHMENT(key);
 
-    size_t write_size;    // how many bytes we want to send
-    ssize_t write_count;   // how many bytes where written
-    uint8_t* write_buffer; /
+    size_t write_size;
+    ssize_t write_count;
+    uint8_t* write_buffer;
 
     write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
     write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL);

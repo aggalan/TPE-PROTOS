@@ -1,4 +1,5 @@
 #include "hello.h"
+#include <stdint.h>
 
 #define P_VERSION 0x05
 
@@ -7,7 +8,7 @@ void initNegotiationParser(struct hello_parser * p) {
         return;
     }
     p->state =  STARTED;
-    p->methods[0] = NO_METHOD;
+    p->method = NO_METHOD;
 }
 
 NegState negotiationParse(struct hello_parser * p, buffer * buffer){

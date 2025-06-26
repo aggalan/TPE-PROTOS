@@ -27,9 +27,9 @@ struct hello_parser {
 };
 
 typedef enum negotiation_status {
-    NEGR_OK = 0,
-    NEGR_FULLBUFFER,
-    NEGR_INVALIDMETHOD,
+    OK = 0,
+    FULLBUFFER,
+    INVALIDMETHOD,
 } NegCodes;
 
 
