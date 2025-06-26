@@ -16,7 +16,7 @@
 #include "buffer.h"
 #include "stm.h"
 #include "parser.h"
-#include "./greeting/greeting.h"
+#include "./negotiation/negotiation.h"
 
 #define BUFFER_SIZE 4096
 
@@ -35,12 +35,12 @@ static const struct fd_handler socks5_handler = {
 static const struct state_definition client_actions[] = {
     {
         .state        = NEGOTIATION_READ,
-        .on_arrival   = greeting_init,
-        .on_read_ready  = greeting_read,
+        .on_arrival   = negotiation_init,
+        .on_read_ready  = negotiation_read,
 },
 {
     .state        = NEGOTIATION_WRITE,
-    .on_write_ready = greeting_write,
+    .on_write_ready = negotiation_write,
 },
 {
     .state        = DONE,

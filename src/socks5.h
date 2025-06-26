@@ -3,7 +3,7 @@
 
 #include "selector.h"
 #include "buffer.h"
-#include "./greeting/greeting.h"
+#include "./negotiation/negotiation.h"
 #include "stm.h"
 #include <netdb.h>
 #include <stdbool.h>

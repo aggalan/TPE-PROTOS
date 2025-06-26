@@ -4,14 +4,14 @@ project(TPE_PROTOS C)
 set(CMAKE_C_STANDARD 11)
 
 include_directories(src)
-include_directories(src/greeting)
+include_directories(src/negotiation)
 
 add_executable(TPE_PROTOS
-        "src/greeting/ negotiation_parser.h"
-        src/greeting/greeting.c
-        src/greeting/greeting.h
-        src/greeting/hello.c
-        src/greeting/hello.h
+        "src/negotiation/ negotiation_parser.h"
+        src/negotiation/negotiation.c
+        src/negotiation/negotiation.h
+        src/negotiation/negotiation_parser.c
+        src/negotiation/negotiation_parser.h
         src/args.c
         src/args.h
         src/buffer.c

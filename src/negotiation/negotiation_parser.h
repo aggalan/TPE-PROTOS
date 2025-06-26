@@ -22,26 +22,25 @@ typedef enum negotiation_state {
     FAIL
 } NegState;
 
-typedef struct hello_parser {
+typedef struct negotiation_parser {
     uint8_t version;
     uint8_t nmethods;
     AcceptedMethods auth_method;
-    uint8_t selected;
     NegState state;
 } NegParser;
 
 typedef enum negotiation_status {
     OK = 0,
-    FULLBUFFER,
-    INVALIDMETHOD,
+    FULL_BUFFER,
+    INVALID_METHOD,
 } NegCodes;
 
 
-void initNegotiationParser(struct hello_parser * p);
-NegState negotiationParse(struct hello_parser * p, buffer * buffer);
-bool hasNegotiationReadEnded(struct hello_parser * p);
-bool hasNegotiationErrors(struct hello_parser * p);
-NegCodes fillNegotiationAnswer(struct hello_parser * p,buffer * buffer);
+void init_negotiation_parser(struct negotiation_parser * p);
+NegState negotiation_parse(struct negotiation_parser * p, buffer * buffer);
+bool has_negotiation_read_ended(struct negotiation_parser * p);
+bool has_negotiation_errors(struct negotiation_parser * p);
+NegCodes fill_negotiation_answer(struct negotiation_parser * p,buffer * buffer);
 
 
 

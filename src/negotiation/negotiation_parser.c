@@ -1,9 +1,9 @@
-#include "hello.h"
+#include "negotiation_parser.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stddef.h>
 
-void initNegotiationParser(NegParser * p) {
+void init_negotiation_parser(NegParser * p) {
     if(p == NULL) {
         return;
     }
@@ -11,7 +11,7 @@ void initNegotiationParser(NegParser * p) {
     p->auth_method = NO_METHOD;
 }
 
-NegState negotiationParse(NegParser * p, buffer * buffer){
+NegState negotiation_parse(NegParser * p, buffer * buffer){
     printf("Started parsing negotiation... \n");
     if(p == NULL || buffer == NULL) {
         return FAIL;
@@ -67,21 +67,21 @@ NegState negotiationParse(NegParser * p, buffer * buffer){
 
     return p->state;
 }
-bool hasNegotiationReadEnded(NegParser * p){
+bool has_negotiation_read_ended(NegParser * p){
     if(p == NULL) {
         return false;
     }
     return p->state == END;
 }
-bool hasNegotiationErrors(NegParser * p){
+bool has_negotiation_errors(NegParser * p){
     if(p == NULL) {
         return false;
     }
     return p->state == FAIL;
 }
-NegCodes fillNegotiationAnswer(NegParser * p, buffer * buffer){
+NegCodes fill_negotiation_answer(NegParser * p, buffer * buffer){
     if (!buffer_can_write(buffer))
-        return FULLBUFFER;
+        return FULL_BUFFER;
     buffer_write(buffer, SOCKS_VERSION);
     buffer_write(buffer, p->auth_method);
     return OK;

@@ -1,22 +1,22 @@
-#include "greeting.h"
+#include "negotiation.h"
 #include "../socks5.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
 
 
-void greeting_init(const unsigned state,struct selector_key *key) {
+void negotiation_init(const unsigned state,struct selector_key *key) {
     printf("Creating negotiation...\n");
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
     }
-    initNegotiationParser(&socks->client.negotiation_parser);
+    init_negotiation_parser(&socks->client.negotiation_parser);
     printf("All negotiation elements created!\n");
 
 }
 
-unsigned greeting_read(struct selector_key *key) {
+unsigned negotiation_read(struct selector_key *key) {
     printf("Started reading negotiation\n");
     SocksClient * data = ATTACHMENT(key);
 
@@ -30,9 +30,9 @@ unsigned greeting_read(struct selector_key *key) {
     }
 
     buffer_write_adv(&data->read_buffer, read_count);
-    negotiationParse(&data->client.negotiation_parser, &data->read_buffer);
-    if (hasNegotiationReadEnded(&data->client.negotiation_parser)) {
-        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fillNegotiationAnswer(&data->client.negotiation_parser , &data->read_buffer)) {
+    negotiation_parse(&data->client.negotiation_parser, &data->read_buffer);
+    if (has_negotiation_read_ended(&data->client.negotiation_parser)) {
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_negotiation_answer(&data->client.negotiation_parser , &data->read_buffer)) {
             printf("Greeting_read selector_set_interest_key failed\n");
             return ERROR;
         }
@@ -42,7 +42,7 @@ unsigned greeting_read(struct selector_key *key) {
     return NEGOTIATION_READ;
 }
 
-unsigned greeting_write(struct selector_key *key) {
+unsigned negotiation_write(struct selector_key *key) {
     printf("Started negotiation response\n");
     SocksClient* data = ATTACHMENT(key);
 
@@ -64,7 +64,7 @@ unsigned greeting_write(struct selector_key *key) {
         return NEGOTIATION_WRITE;
     }
 
-    if (hasNegotiationErrors(&data->client.negotiation_parser) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
+    if (has_negotiation_errors(&data->client.negotiation_parser) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
         return ERROR;
     }
 
