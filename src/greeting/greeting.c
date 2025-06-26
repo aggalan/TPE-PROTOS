@@ -6,18 +6,19 @@
 
 
 void greeting_init(const unsigned state,struct selector_key *key) {
-    printf("Greeting_init\n");
+    printf("Creating negotiation...\n");
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
     }
     initNegotiationParser(&socks->client.negotiation_parser);
+    printf("All negotiation elements created!\n");
 
 }
 
 unsigned greeting_read(struct selector_key *key) {
-    printf("Greeting_read\n");
-    struct socks5 * data = ATTACHMENT(key);
+    printf("Started reading negotiation\n");
+    SocksClient * data = ATTACHMENT(key);
 
     size_t read_size;
 
@@ -35,28 +36,28 @@ unsigned greeting_read(struct selector_key *key) {
             printf("Greeting_read selector_set_interest_key failed\n");
             return ERROR;
         }
-        printf("negotiation answer\n");
+        printf("Parsed negotiation successfully\n");
         return NEGOTIATION_WRITE;
     }
     return NEGOTIATION_READ;
 }
 
 unsigned greeting_write(struct selector_key *key) {
-    printf("started negotiation writing\n");
+    printf("Started negotiation response\n");
     SocksClient* data = ATTACHMENT(key);
 
     size_t write_size;
 
-    char response[2] = {SOCKS_VERSION, data->client.negotiation_parser.auth_method}; // Respuesta de saludo con autenticación no requerida
-    send(data->origin_fd, response, sizeof(response), MSG_DONTWAIT);
-
     uint8_t * write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
-    ssize_t write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL);
+    ssize_t write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL); //NOWAIT?
 
     if (write_count < 0) {
         printf("Greeting_write send error\n");
         return ERROR;
     }
+
+    printf("Response sent!\n");
+
     buffer_read_adv(&data->write_buffer, write_count);
 
     if (buffer_can_read(&data->write_buffer)) {
@@ -67,10 +68,16 @@ unsigned greeting_write(struct selector_key *key) {
         return ERROR;
     }
 
+    printf("Negotiation ended: OK\n");
 
+    if (USER_PASS == data->client.negotiation_parser.auth_method) {
+        printf("User has selected authentication\n");
+        // return AUTHENTICATION_READ
+    }
 
-    //ver auth method
+    printf("User has selected NO authentication\n");
 
+    //return REQUEST_READ
     return OK;
 }
 

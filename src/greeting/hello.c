@@ -12,7 +12,7 @@ void initNegotiationParser(NegParser * p) {
 }
 
 NegState negotiationParse(NegParser * p, buffer * buffer){
-    printf("started parsing \n");
+    printf("Started parsing negotiation... \n");
     if(p == NULL || buffer == NULL) {
         return FAIL;
     }
@@ -26,7 +26,7 @@ NegState negotiationParse(NegParser * p, buffer * buffer){
                 } else {
                     p->state = FAIL;
                 }
-                printf("version %d\n", c);
+                printf("VERSION: %d\n", c);
                 break;
             case NUMBER:
                 if(c > 0 && c <= METHOD_SIZE) {
@@ -37,17 +37,19 @@ NegState negotiationParse(NegParser * p, buffer * buffer){
                 } else {
                     p->state = FAIL;
                 }
-                printf("number of methods %d\n", c);
+                printf("NMETHODS: %d\n", c);
                 break;
             case METHODS:
                 if(p->nmethods > 0) {
                     if ( c == NO_AUTH ){
                         p->auth_method = NO_AUTH;
+                        printf("NO_AUTH_METHOD \n");
+
                     } else if (c == USER_PASS) {
                         p->auth_method = USER_PASS;
+                        printf("USER_PASS_METHOD \n");
                         p->state = END;
                     }
-                    printf("method %d\n", c);
                 } else {
                     p->state = FAIL;
                 }
