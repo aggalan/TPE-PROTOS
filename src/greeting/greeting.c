@@ -3,89 +3,71 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 
-static void
-on_hello_method(struct hello_parser *p, const uint8_t method)
-{
-    uint8_t *selected = p->data;
-    if (method == SOCKS_HELLO_NOAUTHENTICATION_REQUIRED)
-        *selected = method;
-}
 
 static void
 greeting_init(const unsigned state, struct selector_key *key)
 {
-    struct hello_st *d = &ATTACHMENT(key)->client.hello;
-
-    d->rb = &ATTACHMENT(key)->read_buffer;
-    d->wb = &ATTACHMENT(key)->write_buffer;
-
-    d->parser.data = &d->method;
-    d->parser.on_authentication_method = on_hello_method;
-    hello_parser_init(&d->parser);
+    struct socks5 *client = ATTACHMENT(key);
+    if (socks == NULL) {
+        return;
+    }
+    initNegotiationParser(&socks->hello.parser);
 }
-
-static unsigned hello_process(const struct hello_st *d);
 
 unsigned
 greeting_read(struct selector_key *key)
 {
-    struct hello_st *d = &ATTACHMENT(key)->client.hello;
-    uint8_t   *ptr;
-    size_t     count;
-    ssize_t    n;
+    struct socks5 * data = ATTACHMENT(key);
 
-    ptr = buffer_write_ptr(d->rb, &count);
-    n   = recv(key->fd, ptr, count, 0);
-    if (n <= 0)
-        return ERROR;
+    size_t read_size;
+    ssize_t read_count;
+    uint8_t* read_buffer;
 
-    buffer_write_adv(d->rb, n);
-
-    bool              error = false;
-    const enum hello_state st = hello_consume(d->rb, &d->parser, &error);
-
-    if (hello_is_done(st, 0)) {
-        if (selector_set_interest_key(key, OP_WRITE) == SELECTOR_SUCCESS)
-            return hello_process(d);
+    read_buffer = buffer_write_ptr(&data->read_buffer, &read_size);
+    read_count = recv(key->fd, read_buffer, read_size, 0);
+    if (read_count <= 0) {
         return ERROR;
     }
-    return GREETING;
+
+    buffer_write_adv(&data->read_buffer, read_count);
+    negotiationParse(&data->client.hello.parser, &data->read_buffer);
+    if (hasNegotiationReadEnded(&data->client.hello.parser)) {
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fillNegotiationAnswer(&data->client.hello.parser, &data->read_buffer)) {
+            return ERROR;
+        }
+        return NEGOTIATION_WRITE;
+    }
+    return NEGOTIATION_READ;
 }
 
 unsigned
 greeting_write(struct selector_key *key)
 {
-    struct hello_st *d = &ATTACHMENT(key)->client.hello;
-    uint8_t *ptr   = buffer_read_ptr(d->wb, NULL);
-    ssize_t  n     = send(key->fd, ptr, buffer_can_read(d->wb), 0);
+    struct socks5* data = ATTACHMENT(key);
 
-    if (n <= 0)
+    size_t write_size;    // how many bytes we want to send
+    ssize_t write_count;   // how many bytes where written
+    uint8_t* write_buffer; /
+
+    write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
+    write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL);
+
+    if (write_count <= 0) {
         return ERROR;
-
-    buffer_read_adv(d->wb, n);
-
-    if (!buffer_can_read(d->wb)) {
-        return DONE;
     }
-    return GREETING;
-}
+    buffer_read_adv(&data->write_buffer, write_count);
 
-static unsigned
-hello_process(const struct hello_st *d)
-{
-    const uint8_t method  = d->method;
-    const uint8_t rep     = (method == SOCKS_HELLO_NO_ACCEPTABLE_METHODS)
-                            ? 0xFF : 0x00;
+    if (buffer_can_read(&data->write_buffer)) {
+        return NEGOTIATION_WRITE;
+    }
 
-    if (hello_marshall(d->wb, rep) == -1)
+    if (hasNegotiationErrors(&data->client.hello.parser) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
         return ERROR;
+    }
 
-    return HELLO_WRITE;
+    //ver auth method
 }
 
-void
-greeting_close(const unsigned state, struct selector_key *key)
-{
-    (void) state;
-    (void) key;
-}
+
+
+

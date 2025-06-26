@@ -4,8 +4,8 @@
 #include "selector.h"
 
 enum socks_v5state {
-    GREETING_READ,
-    GREETING_WRITE,
+    NEGOTIATION_READ,
+    NEGOTIATION_WRITE,
     DONE,
     ERROR,
 };
@@ -15,8 +15,8 @@ struct socks5 {
     int                        client_fd;
     int                        origin_fd;
 
-    buffer *                    read_buffer;
-    buffer *                    write_buffer;
+    buffer                     read_buffer;
+    buffer                     write_buffer;
     bool                       closed;
 
     union {

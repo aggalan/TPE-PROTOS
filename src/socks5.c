@@ -94,14 +94,11 @@ void socksv5_passive_accept(struct selector_key *key)
     {
         goto fail;
     }
-    state = socks5_new(client);
+    state = socks5_new(client, &client_addr, client_addr_len);
     if (state == NULL)
     {
         goto fail;
     }
-    memcpy(&state->client_addr, &client_addr, client_addr_len);
-    state->client_addr_len = client_addr_len;
-
     if (SELECTOR_SUCCESS != selector_register(key->s, client, &socks5_handler,OP_READ, state))
     {
         goto fail;
@@ -119,12 +116,12 @@ fail:
 
 static const struct state_definition client_statbl[] = {
         {
-                .state        = GREETING_READ,
+                .state        = NEGOTIATION_READ,
                 .on_arrival   = greeting_init,
                 .on_read_ready  = greeting_read,
         },
         {
-                .state        = GREETING_WRITE,
+                .state        = NEGOTIATION_WRITE,
                 .on_write_ready = greeting_write,
         },
         {
