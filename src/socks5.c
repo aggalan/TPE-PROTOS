@@ -35,8 +35,8 @@ struct socks5 {
     int                        client_fd;
     int                        origin_fd;
 
-    buffer                     read_buffer;
-    buffer                     write_buffer;
+    buffer *                    read_buffer;
+    buffer *                    write_buffer;
 
     struct {
         struct hello_st        hello;

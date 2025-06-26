@@ -1,5 +1,5 @@
 #include "greeting.h"
-#include "socks5.h"
+#include "../socks5.h"
 #include <stdbool.h>
 #include <sys/socket.h>
 
