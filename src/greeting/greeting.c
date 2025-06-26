@@ -12,6 +12,7 @@ greeting_init(const unsigned state, struct selector_key *key)
         return;
     }
     initNegotiationParser(&socks->hello.parser);
+
 }
 
 unsigned

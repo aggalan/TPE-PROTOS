@@ -1,14 +1,16 @@
 #include "hello.h"
 #include <stdint.h>
+#include <stddef.h>
+#
 
-#define P_VERSION 0x05
+#define VERSION_5 0x05
 
 void initNegotiationParser(struct hello_parser * p) {
     if(p == NULL) {
         return;
     }
-    p->state =  STARTED;
-    p->method = NO_METHOD;
+    p->state = VERSION;
+    p->auth_method = NO_METHOD;
 }
 
 NegState negotiationParse(struct hello_parser * p, buffer * buffer){
@@ -19,7 +21,7 @@ NegState negotiationParse(struct hello_parser * p, buffer * buffer){
         uint8_t c = buffer_read(buffer);
         switch(p->state) {
             case VERSION:
-                if(c == P_VERSION) {
+                if(c == VERSION_5) {
                     p->version = c;
                     p->state = NUMBER;
                 } else {
@@ -73,8 +75,8 @@ bool hasNegotiationErrors(struct hello_parser * p){
 }
 NegCodes fillNegotiationAnswer(struct hello_parser * p, buffer * buffer){
     if (!buffer_can_write(buffer))
-        return NEGR_FULLBUFFER;
+        return FULLBUFFER;
     buffer_write(buffer, VERSION_5);
-    buffer_write(buffer, p->authMethod);
-    return NEGR_OK;
+    buffer_write(buffer, p->auth_method);
+    return OK;
 }

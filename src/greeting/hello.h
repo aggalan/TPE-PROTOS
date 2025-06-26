@@ -2,6 +2,8 @@
 #define TPE_PROTOS_HELLO_H
 #define METHOD_SIZE 255
 #include "../buffer.h"
+#include <stdint.h>
+
 
 typedef enum accepted_methods {
     NO_AUTH = 0x00,
