@@ -17,16 +17,16 @@ typedef enum negotiation_state {
     NUMBER,
     METHODS,
     END,
-    ERROR
+    FAIL
 } NegState;
 
-struct hello_parser {
+typedef struct hello_parser {
     uint8_t version;
     uint8_t nmethods;
     AcceptedMethods auth_method;
     uint8_t selected;
     NegState state;
-};
+} NegParser;
 
 typedef enum negotiation_status {
     OK = 0,

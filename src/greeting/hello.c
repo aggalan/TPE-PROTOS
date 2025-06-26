@@ -5,7 +5,7 @@
 
 #define VERSION_5 0x05
 
-void initNegotiationParser(struct hello_parser * p) {
+void initNegotiationParser(NegParser * p) {
     if(p == NULL) {
         return;
     }
@@ -13,9 +13,9 @@ void initNegotiationParser(struct hello_parser * p) {
     p->auth_method = NO_METHOD;
 }
 
-NegState negotiationParse(struct hello_parser * p, buffer * buffer){
+NegState negotiationParse(NegParser * p, buffer * buffer){
     if(p == NULL || buffer == NULL) {
-        return ERROR;
+        return FAIL;
     }
     while(buffer_can_read(buffer)) {
         uint8_t c = buffer_read(buffer);
@@ -25,7 +25,7 @@ NegState negotiationParse(struct hello_parser * p, buffer * buffer){
                     p->version = c;
                     p->state = NUMBER;
                 } else {
-                    p->state = ERROR;
+                    p->state = FAIL;
                 }
                 break;
             case NUMBER:
@@ -35,7 +35,7 @@ NegState negotiationParse(struct hello_parser * p, buffer * buffer){
                 } else if (c == 0) {
                     p->state = END;
                 } else {
-                    p->state = ERROR;
+                    p->state = FAIL;
                 }
                 break;
             case METHODS:
@@ -47,33 +47,35 @@ NegState negotiationParse(struct hello_parser * p, buffer * buffer){
                         p->state = END;
                     }
                 } else {
-                    p->state = ERROR;
+                    p->state = FAIL;
                 }
                 break;
             case END:
                 return END;
-            case ERROR:
-                return ERROR;
+            case FAIL:
+                return FAIL;
 
         }
-        if(p->state == ERROR) {
-            return ERROR;
+        if(p->state == FAIL) {
+            return FAIL;
         }
     }
+
+    return p->state;
 }
-bool hasNegotiationReadEnded(struct hello_parser * p){
+bool hasNegotiationReadEnded(NegParser * p){
     if(p == NULL) {
         return false;
     }
     return p->state == END;
 }
-bool hasNegotiationErrors(struct hello_parser * p){
+bool hasNegotiationErrors(NegParser * p){
     if(p == NULL) {
         return false;
     }
-    return p->state == ERROR;
+    return p->state == FAIL;
 }
-NegCodes fillNegotiationAnswer(struct hello_parser * p, buffer * buffer){
+NegCodes fillNegotiationAnswer(NegParser * p, buffer * buffer){
     if (!buffer_can_write(buffer))
         return FULLBUFFER;
     buffer_write(buffer, VERSION_5);
