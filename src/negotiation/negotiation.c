@@ -33,7 +33,7 @@ unsigned negotiation_read(struct selector_key *key) {
     negotiation_parse(&data->client.negotiation_parser, &data->read_buffer);
     if (has_negotiation_read_ended(&data->client.negotiation_parser)) {
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_negotiation_answer(&data->client.negotiation_parser , &data->write_buffer)) {
-            printf("Greeting_read selector_set_interest_key failed\n");
+            printf("No methods allowed or selector error\n");
             return ERROR;
         }
         printf("Parsed negotiation successfully\n");

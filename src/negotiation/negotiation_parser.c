@@ -80,5 +80,7 @@ NegCodes fill_negotiation_answer(NegParser * p, buffer * buffer){
     printf("Filling negotiation answer... \n");
     buffer_write(buffer, SOCKS_VERSION);
     buffer_write(buffer, p->auth_method);
+    if (p->auth_method == NO_METHOD)
+        return NEG_INVALID_METHOD;
     return NEG_OK;
 }
