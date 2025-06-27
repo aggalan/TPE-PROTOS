@@ -3,6 +3,7 @@
 //
 
 #include "authentication.h"
+#include "authentication_parser.h"
 #include "../socks5.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,7 +16,7 @@ void authentication_init(const unsigned state,struct selector_key *key) {
     if (socks == NULL) {
         return;
     }
-    //init_authentication_parser(&socks->client.negotiation_parser);
+    init_authentication_parser(&socks->client.negotiation_parser);
     printf("All authentication elements created!\n");
 
 }

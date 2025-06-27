@@ -6,7 +6,6 @@
 
 #define SOCKS_VERSION 0x05
 
-
 typedef enum accepted_methods {
     NO_AUTH = 0x00,
     USER_PASS = 0x02,
@@ -15,11 +14,11 @@ typedef enum accepted_methods {
 
 
 typedef enum negotiation_state {
-    VERSION = 0,
-    NUMBER,
-    METHODS,
-    END,
-    FAIL
+    NEG_VERSION = 0,
+    NEG_NMETHODS,
+    NEG_METHODS,
+    NEG_END,
+    NEG_ERROR
 } NegState;
 
 typedef struct negotiation_parser {
@@ -30,17 +29,17 @@ typedef struct negotiation_parser {
 } NegParser;
 
 typedef enum negotiation_status {
-    OK = 0,
-    FULL_BUFFER,
-    INVALID_METHOD,
+    NEG_OK = 0,
+    NEG_FULL_BUFFER,
+    NEG_INVALID_METHOD,
 } NegCodes;
 
 
-void init_negotiation_parser(struct negotiation_parser * p);
-NegState negotiation_parse(struct negotiation_parser * p, buffer * buffer);
-bool has_negotiation_read_ended(struct negotiation_parser * p);
-bool has_negotiation_errors(struct negotiation_parser * p);
-NegCodes fill_negotiation_answer(struct negotiation_parser * p,buffer * buffer);
+void init_negotiation_parser(NegParser * p);
+NegState negotiation_parse(NegParser * p, buffer * buffer);
+bool has_negotiation_read_ended(NegParser * p);
+bool has_negotiation_errors(NegParser * p);
+NegCodes fill_negotiation_answer(NegParser * p,buffer * buffer);
 
 
 
