@@ -11,8 +11,9 @@
 
 typedef enum authentication_check {
     AUTH_SUCCESS = 0,
-    AUTH_DENIED,
+    AUTH_FAILURE
 } AuthCheck;
+
 
 typedef enum authentication_state {
     AUTH_VERSION = 0,
@@ -35,10 +36,12 @@ typedef struct authentication_parser {
 } AuthParser;
 
 typedef enum authentication_status {
-    AUTH_OK = 0,
-    AUTH_FULL_BUFFER,
-    AUTH_INVALID_VERSION,
+    AUTH_REPLY_OK = 0,
+    AUTH_REPLY_DENIED,
+    AUTH_REPLY_FULL_BUFFER,
+    AUTH_REPLY_BAD_VERSION
 } AuthCodes;
+
 
 void       init_authentication_parser(AuthParser *p);
 AuthState  authentication_parse(AuthParser *p, buffer *b);

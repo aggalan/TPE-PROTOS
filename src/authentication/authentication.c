@@ -1,7 +1,3 @@
-//
-// Created by Agustin Galan on 26/06/2025.
-//
-
 #include "authentication.h"
 #include "authentication_parser.h"
 #include "../socks5.h"

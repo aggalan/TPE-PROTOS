@@ -30,7 +30,7 @@ init_authentication_parser(AuthParser *p) {
     if (p == NULL) return;
     memset(p, 0, sizeof(*p));
     p->state       = AUTH_VERSION;
-    p->auth_check  = AUTH_DENIED;
+    p->auth_check  = AUTH_FAILURE;
 }
 
 AuthState
@@ -85,7 +85,7 @@ authentication_parse(AuthParser *p, buffer *b) {
                     p->passwd[p->idx] = '\0';
 
                     p->auth_check = verify_credentials(p->uname, p->passwd)
-                                    ? AUTH_SUCCESS : AUTH_DENIED;
+                                    ? AUTH_SUCCESS : AUTH_FAILURE;
                     p->state = AUTH_END;
                     return p->state;
                 }
@@ -111,10 +111,10 @@ has_authentication_errors(AuthParser *p) {
 
 AuthCodes
 fill_authentication_answer(AuthParser *p, buffer *b) {
-    if (p == NULL || b == NULL)          return AUTH_ERROR;
-    if (p->state != AUTH_END)            return AUTH_ERROR;
-
+    if (!buffer_can_write(b))
+        return AUTH_REPLY_FULL_BUFFER;
+    printf("Filling Auth answer... \n");
     buffer_write(b, VERSION);
     buffer_write(b, (p->auth_check == AUTH_SUCCESS) ? 0x00 : 0x01);
-    return (p->auth_check == AUTH_SUCCESS) ? AUTH_OK : AUTH_DENIED;
+    return p->auth_check == AUTH_SUCCESS;
 }
