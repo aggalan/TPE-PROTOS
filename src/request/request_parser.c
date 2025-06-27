@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-void initRequestParser(ReqParser *p) {
+void init_request_parser(ReqParser *p) {
     if (p == NULL) return;
     memset(p, 0, sizeof(ReqParser));
     p->state = REQ_VERSION;
@@ -10,7 +10,7 @@ void initRequestParser(ReqParser *p) {
     p->buf_idx = 0;
 }
 
-ReqState requestParse(ReqParser* p, buffer* b) {
+ReqState request_parse(ReqParser* p, buffer* b) {
     if (p == NULL || b == NULL) return REQ_ERROR;
     while (buffer_can_read(b)) {
         uint8_t c = buffer_read(b);
@@ -112,15 +112,15 @@ ReqState requestParse(ReqParser* p, buffer* b) {
     return p->state;
 }
 
-bool hasRequestReadEnded(ReqParser *p) {
+bool has_request_read_ended(ReqParser *p) {
     return p != NULL && p->state == REQ_END;
 }
 
-bool hasRequestErrors(ReqParser *p) {
+bool has_request_errors(ReqParser *p) {
     return p == NULL || p->state == REQ_ERROR;
 }
 
-ReqCodes fillRequestAnswer(ReqParser *p, buffer* b) {
+ReqCodes fill_request_answer(ReqParser *p, buffer* b) {
     return REQ_OK;
 }
 

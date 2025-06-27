@@ -5,8 +5,10 @@
 #include "buffer.h"
 #include "./negotiation/negotiation.h"
 #include "./authentication/authentication.h"
+#include "./request/request.h"
 #include "stm.h"
 #include "authentication/authentication_parser.h"
+#include "request/request_parser.h"
 #include <netdb.h>
 #include <stdbool.h>
 #include <sys/socket.h>
@@ -16,6 +18,8 @@ enum socks_v5state {
     NEGOTIATION_WRITE,
     AUTHENTICATION_READ,
     AUTHENTICATION_WRITE,
+    REQUEST_READ,
+    REQUEST_WRITE,
     DONE,
     ERROR,
 };
@@ -34,6 +38,7 @@ typedef struct socks5 {
     union {
         NegParser negotiation_parser;
         AuthParser authentication_parser;
+        ReqParser request_parser;
     } client;
 
 }SocksClient;

@@ -58,5 +58,6 @@ unsigned authentication_write(struct selector_key *key) {
     }
 
     printf("Response sent!\n");
+    return REQUEST_READ;
     return DONE;
 }

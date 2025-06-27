@@ -18,6 +18,7 @@
 #include "parser.h"
 #include "./negotiation/negotiation.h"
 #include "./authentication/authentication.h"
+#include "./request/request.h"
 
 #define BUFFER_SIZE 4096
 
@@ -51,6 +52,15 @@ static const struct state_definition client_actions[] = {
     .state        = AUTHENTICATION_WRITE,
     .on_write_ready = authentication_write,
 },
+{
+    .state = REQUEST_READ,
+    .on_arrival = request_init,
+    .on_read_ready = request_read,
+},
+{
+        .state = REQUEST_WRITE,
+        .on_write_ready = request_write,
+    },
 
 {
     .state        = DONE,
@@ -183,5 +193,6 @@ static void socksv5_close(struct selector_key *key){
 // }
 
 void socksv5_error(struct selector_key * key) {
+    printf("Error in socksv5\n");
     ATTACHMENT(key)->closed = true;
 }

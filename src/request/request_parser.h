@@ -77,14 +77,14 @@ typedef enum request_codes {
 
 //const char * reqParserToString(const ReqParser * p);
 
-void initRequestParser(ReqParser * p);
+void init_request_parser(ReqParser * p);
 
-ReqState requestParse(ReqParser* p, buffer* buffer);
+ReqState request_parse(ReqParser* p, buffer* buffer);
 
-bool hasRequestReadEnded(ReqParser * p);
+bool has_request_read_ended(ReqParser * p);
 
-bool hasRequestErrors(ReqParser * p);
+bool has_request_errors(ReqParser * p);
 
-ReqCodes fillRequestAnswer( ReqParser * p, buffer* buffer);
+ReqCodes fill_request_answer( ReqParser * p, buffer* buffer);
 
 #endif //REQUEST_PARSER_H
