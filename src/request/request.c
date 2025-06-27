@@ -14,7 +14,6 @@ void request_init(const unsigned state,struct selector_key * key) {
     }
     init_request_parser(&socks->client.request_parser);
     printf("All request elements created!\n");
-
 }
 
 unsigned request_read(struct selector_key *key) {
@@ -38,9 +37,9 @@ unsigned request_read(struct selector_key *key) {
             return ERROR;
         }
         printf("Parsed request successfully\n");
-        return NEGOTIATION_WRITE;
+        return REQUEST_READ;
     }
-    return NEGOTIATION_READ;
+    return REQUEST_WRITE;
 }
 
 unsigned request_write(struct selector_key *key) {

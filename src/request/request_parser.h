@@ -23,7 +23,7 @@ typedef enum atyp {
 } ReqAtyp;
 
 
-typedef union adress {
+typedef union address {
     struct in_addr ipv4;
     uint8_t domainname[REQ_MAX_DN_LENGHT + 1];
     struct in6_addr ipv6;

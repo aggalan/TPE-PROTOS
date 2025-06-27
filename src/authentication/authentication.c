@@ -14,7 +14,6 @@ void authentication_init(const unsigned state, struct selector_key *key) {
     }
     init_authentication_parser(&socks->client.authentication_parser);
     printf("All authentication elements created!\n");
-
 }
 
 unsigned authentication_read(struct selector_key *key) {
@@ -45,19 +44,22 @@ unsigned authentication_read(struct selector_key *key) {
 
 unsigned authentication_write(struct selector_key *key) {
     printf("Started authentication response\n");
-    SocksClient* data = ATTACHMENT(key);
+    SocksClient *data = ATTACHMENT(key);
 
-    size_t write_size;
-
-    uint8_t * write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
-    ssize_t write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL);
-
-    if (write_count < 0) {
-        printf("Authentication_write send error\n");
+    size_t   write_size;
+    uint8_t *write_ptr = buffer_read_ptr(&data->write_buffer, &write_size);
+    ssize_t  n = send(key->fd, write_ptr, write_size, MSG_NOSIGNAL);
+    if (n <= 0) {
+        perror("authentication_write/send");
         return ERROR;
     }
+    buffer_read_adv(&data->write_buffer, n);
 
+    if (buffer_can_read(&data->write_buffer)) {
+        return AUTHENTICATION_WRITE;
+    }
+
+    selector_set_interest_key(key, OP_READ);
     printf("Response sent!\n");
     return REQUEST_READ;
-    return DONE;
 }
