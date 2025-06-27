@@ -38,4 +38,8 @@ add_executable(TPE_PROTOS
         src/authentication/authentication.c
         src/authentication/authentication.h
         src/authentication/authentication_parser.c
-        src/authentication/authentication_parser.h)
+        src/authentication/authentication_parser.h
+        src/request/request.c
+        src/request/request_parser.c
+        src/request/request.h
+        src/request/request_parser.h)
