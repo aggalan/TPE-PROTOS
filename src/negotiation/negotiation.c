@@ -72,7 +72,7 @@ unsigned negotiation_write(struct selector_key *key) {
 
     if (USER_PASS == data->client.negotiation_parser.auth_method) {
         printf("User has selected authentication\n");
-        return DONE;
+        return AUTHENTICATION_READ;
     }
 
     printf("User has selected NO authentication\n");

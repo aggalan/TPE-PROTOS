@@ -47,7 +47,11 @@ static const struct state_definition client_actions[] = {
     .state        = AUTHENTICATION_READ,
     .on_arrival   = authentication_init,
     .on_read_ready  = authentication_read,
+},{
+    .state        = AUTHENTICATION_WRITE,
+    .on_write_ready = authentication_write,
 },
+
 {
     .state        = DONE,
 //    .on_departure = socksv5_done,

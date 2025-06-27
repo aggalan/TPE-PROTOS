@@ -1,0 +1,2 @@
+john   secret123
+bob     hunter2

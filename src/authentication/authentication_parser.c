@@ -1,105 +1,120 @@
 #include "authentication_parser.h"
-#include <stddef.h>
+#include <string.h>
 #include <stdio.h>
 
-#include "negotiation_parser.h"
+#define CRED_FILE  "users.txt"
 
-void init_authentication_parser(AuthParser * p) {
-    if(p == NULL) {
-        return;
+
+static bool
+verify_credentials(const char *user, const char *pass) {
+    FILE *f = fopen(CRED_FILE, "r");
+    if (f == NULL)
+        return false;
+
+    char fuser[U_MAX_LEN + 1];
+    char fpass[P_MAX_LEN + 1];
+
+    while (fscanf(f, " %15s %15s", fuser, fpass) == 2) {
+        if (strcmp(user, fuser) == 0 && strcmp(pass, fpass) == 0) {
+            fclose(f);
+            return true;
+        }
     }
-    p->state = AUTH_VERSION;
-    p->auth_check = AUTH_DENIED;
+    fclose(f);
+    return false;
 }
-AuthState authentication_parse(AuthParser * p, buffer * buffer) {
-    printf("Started parsing authentication... \n");
-    if(p == NULL || buffer == NULL) {
-        return AUTH_ERROR;
-    }
-    while(buffer_can_read(buffer)) {
-        uint8_t c = buffer_read(buffer);
-        switch(p->state) {
+
+
+void
+init_authentication_parser(AuthParser *p) {
+    if (p == NULL) return;
+    memset(p, 0, sizeof(*p));
+    p->state       = AUTH_VERSION;
+    p->auth_check  = AUTH_DENIED;
+}
+
+AuthState
+authentication_parse(AuthParser *p, buffer *b) {
+    if (p == NULL || b == NULL) return AUTH_ERROR;
+
+    while (buffer_can_read(b)) {
+        uint8_t c = buffer_read(b);
+
+        switch (p->state) {
+
             case AUTH_VERSION:
-                if(c == VERSION) {
+                if (c == VERSION) {
                     p->version = c;
-                    p->state = ULEN;
+                    p->state   = ULEN;
                 } else {
-                    p->state = AUTH_ERROR;
-                }
-                printf("VERSION: %d\n", c);
-                break;
-            case ULEN:
-                if(c > 0 && c <= U_MAX_LEN) {
-                    p->ulen = c;
-                    p->state = UNAME;
-                }  else {
-                    p->state = NEG_ERROR;
-                }
-                printf("ULEN: %d\n", c);
-                break;
-            case UNAME:
-                if(c > 0 && c <= p->ulen) {
-                    printf("UNAME: %c\n", c);
-                    p->state = PLEN;
-                } else {
-                    p->state = NEG_ERROR;
+                    p->state   = AUTH_ERROR;
                 }
                 break;
-            case PLEN:
-                if(c > 0 && c <= P_MAX_LEN) {
-                    p->ulen = c;
-                    p->state = UNAME;
-                }  else {
-                    p->state = NEG_ERROR;
-                }
-                printf("PLEN: %d\n", c);
-                break;
-            case PASSWD:
-                if(c > 0 && c <= p->plen) {
-                    printf("PASSWD: %c\n", c);
-                    p->auth_check = AUTH_SUCCESS;
-                    p->state = AUTH_END;
-                } else {
-                    p->state = NEG_ERROR;
-                }
-                break;
-            case AUTH_END:
-                return AUTH_END;
-            case AUTH_ERROR:
-                return AUTH_ERROR;
 
+            case ULEN:
+                if (c == 0 || c > U_MAX_LEN) {
+                    p->state = AUTH_ERROR;
+                    break;
+                }
+                p->ulen  = c;
+                p->idx   = 0;
+                p->state = UNAME;
+                break;
+
+            case UNAME:
+                p->uname[p->idx++] = (char)c;
+                if (p->idx == p->ulen) {
+                    p->uname[p->idx] = '\0';
+                    p->state = PLEN;
+                }
+                break;
+
+            case PLEN:
+                if (c == 0 || c > P_MAX_LEN) {
+                    p->state = AUTH_ERROR;
+                    break;
+                }
+                p->plen  = c;
+                p->idx   = 0;
+                p->state = PASSWD;
+                break;
+
+            case PASSWD:
+                p->passwd[p->idx++] = (char)c;
+                if (p->idx == p->plen) {
+                    p->passwd[p->idx] = '\0';
+
+                    p->auth_check = verify_credentials(p->uname, p->passwd)
+                                    ? AUTH_SUCCESS : AUTH_DENIED;
+                    p->state = AUTH_END;
+                    return p->state;
+                }
+                break;
+
+            case AUTH_END:
+            case AUTH_ERROR:
+                return p->state;
         }
-        if(p->state == NEG_ERROR) {
-            return NEG_ERROR;
-        }
     }
+    return p->state;
 }
-bool has_authentication_read_ended(AuthParser * p){
-    if(p == NULL) {
-        return false;
-    }
-    return p->state == AUTH_END;
+
+bool
+has_authentication_read_ended(AuthParser *p) {
+    return p != NULL && p->state == AUTH_END;
 }
-bool has_authentication_errors(AuthParser * p){
-    if(p == NULL) {
-        return false;
-    }
-    return p->state == AUTH_ERROR;
+
+bool
+has_authentication_errors(AuthParser *p) {
+    return p != NULL && p->state == AUTH_ERROR;
 }
-AuthCodes fill_authentication_answer(AuthParser * p,buffer * buffer){
-    if(p == NULL || buffer == NULL) {
-        return AUTH_ERROR;
-    }
-    if(p->state != AUTH_END) {
-        return AUTH_ERROR;
-    }
-    if(p->auth_check == AUTH_SUCCESS) {
-        buffer_write(buffer, VERSION);
-        buffer_write(buffer, 0x00);
-        return AUTH_OK;
-    } else {
-        buffer_write(buffer, VERSION);
-        buffer_write(buffer, 0x01);
-        return AUTH_DENIED;
-    }
+
+AuthCodes
+fill_authentication_answer(AuthParser *p, buffer *b) {
+    if (p == NULL || b == NULL)          return AUTH_ERROR;
+    if (p->state != AUTH_END)            return AUTH_ERROR;
+
+    buffer_write(b, VERSION);
+    buffer_write(b, (p->auth_check == AUTH_SUCCESS) ? 0x00 : 0x01);
+    return (p->auth_check == AUTH_SUCCESS) ? AUTH_OK : AUTH_DENIED;
 }

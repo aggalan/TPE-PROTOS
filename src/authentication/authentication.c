@@ -10,17 +10,57 @@
 #include <sys/socket.h>
 
 
-void authentication_init(const unsigned state,struct selector_key *key) {
+void authentication_init(const unsigned state, struct selector_key *key) {
     printf("Creating authentication...\n");
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
     }
-    init_authentication_parser(&socks->client.negotiation_parser);
+    init_authentication_parser(&socks->client.authentication_parser);
     printf("All authentication elements created!\n");
 
 }
 
 unsigned authentication_read(struct selector_key *key) {
-    return 0;
+    printf("Started reading authentication\n");
+    SocksClient *data = ATTACHMENT(key);
+
+    size_t read_size;
+
+    uint8_t *read_buffer = buffer_write_ptr(&data->read_buffer, &read_size);
+    ssize_t read_count = recv(key->fd, read_buffer, read_size, 0);
+    if (read_count <= 0) {
+        printf("Authentication_read read error\n");
+        return ERROR;
+    }
+
+    buffer_write_adv(&data->read_buffer, read_count);
+    authentication_parse(&data->client.authentication_parser, &data->read_buffer);
+    if (has_authentication_read_ended(&data->client.authentication_parser)) {
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_authentication_answer(&data->client.authentication_parser , &data->write_buffer)) {
+            printf("Authentication_read selector_set_interest_key failed\n");
+            return ERROR;
+        }
+        printf("Parsed authentication successfully\n");
+        return AUTHENTICATION_WRITE;
+    }
+    return AUTHENTICATION_READ;
+}
+
+unsigned authentication_write(struct selector_key *key) {
+    printf("Started authentication response\n");
+    SocksClient* data = ATTACHMENT(key);
+
+    size_t write_size;
+
+    uint8_t * write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
+    ssize_t write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL);
+
+    if (write_count < 0) {
+        printf("Authentication_write send error\n");
+        return ERROR;
+    }
+
+    printf("Response sent!\n");
+    return DONE;
 }
