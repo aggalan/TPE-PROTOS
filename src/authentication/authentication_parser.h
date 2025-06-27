@@ -5,7 +5,7 @@
 #define P_MAX_LEN 15
 #include "../buffer.h"
 #include <stdint.h>
-#define SOCKS_VERSION 0x05
+#define VERSION 0x01
 
 
 typedef enum authentication_check {
