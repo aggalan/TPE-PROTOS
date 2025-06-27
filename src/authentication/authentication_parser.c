@@ -125,5 +125,5 @@ fill_authentication_answer(AuthParser *p, buffer *b) {
     printf("Filling Auth answer... \n");
     buffer_write(b, VERSION);
     buffer_write(b, (p->auth_check == AUTH_SUCCESS) ? 0x00 : 0x01);
-    return p->auth_check == AUTH_SUCCESS;
+    return p->auth_check == AUTH_SUCCESS? AUTH_REPLY_OK : AUTH_REPLY_DENIED;
 }
