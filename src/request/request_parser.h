@@ -3,6 +3,7 @@
 #include "../buffer.h"
 #include <stdint.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define METHOD_SIZE 255
 #define SOCKS_VERSION 0x05
@@ -65,6 +66,8 @@ typedef struct request_parser {
     in_port_t dst_port;
     ReqState state;
     ReqStatus status;
+    uint8_t buf[16];   // buffer temporal reutilizable (16 bytes para IPv6, suficiente para dirección y puerto)
+    uint8_t buf_idx;   // índice de progreso en el buffer
 } ReqParser;
 
 typedef enum request_codes {
