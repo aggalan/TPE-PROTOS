@@ -37,9 +37,9 @@ unsigned request_read(struct selector_key *key) {
             return ERROR;
         }
         printf("Parsed request successfully\n");
-        return REQUEST_READ;
+        return REQUEST_WRITE;
     }
-    return REQUEST_WRITE;
+    return REQUEST_READ;
 }
 
 unsigned request_write(struct selector_key *key) {
@@ -49,7 +49,7 @@ unsigned request_write(struct selector_key *key) {
     size_t write_size;
 
     uint8_t * write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
-    ssize_t write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL); //NOWAIT?
+    ssize_t write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL);
 
     if (write_count < 0) {
         printf("request response send error\n");
@@ -69,15 +69,6 @@ unsigned request_write(struct selector_key *key) {
     }
 
     printf("Request ended: OK\n");
-
-    // if (USER_PASS == data->client.negotiation_parser.auth_method) {
-    //     printf("User has selected authentication\n");
-    //     return AUTHENTICATION_READ;
-    // }
-    //
-    // printf("User has selected NO authentication\n");
-
-    //return REQUEST_READ
     return DONE;
 }
 

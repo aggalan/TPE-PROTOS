@@ -120,7 +120,40 @@ bool has_request_errors(ReqParser *p) {
     return p == NULL || p->state == REQ_ERROR;
 }
 
-ReqCodes fill_request_answer(ReqParser *p, buffer* b) {
+ReqCodes
+fill_request_answer(ReqParser *p, buffer *b) {
+
+    if (!buffer_can_write(b))
+        return REQ_FULLBUFFER;
+
+    printf("Filling request answer... \n");
+
+    uint8_t rep = 0x01;
+    switch (p->status) {
+        case REQ_SUCCEDED:                       rep = 0x00; break;
+        case REQ_ERROR_GENERAL_FAILURE:          rep = 0x01; break;
+        case REQ_ERROR_CONNECTION_NOT_ALLOWED:   rep = 0x02; break;
+        case REQ_ERROR_NTW_UNREACHABLE:          rep = 0x03; break;
+        case REQ_ERROR_HOST_UNREACHABLE:         rep = 0x04; break;
+        case REQ_ERROR_CONNECTION_REFUSED:       rep = 0x05; break;
+        case REQ_ERROR_TTL_EXPIRED:              rep = 0x06; break;
+        case REQ_ERROR_COMMAND_NOT_SUPPORTED:    rep = 0x07; break;
+        case REQ_ERROR_ADDRESS_TYPE_NOT_SUPPORTED: rep = 0x08; break;
+    }
+
+    buffer_write(b, SOCKS_VERSION);
+    buffer_write(b, rep);
+    buffer_write(b, 0x00);
+    buffer_write(b, IPV4);
+
+    buffer_write(b, 0x00);
+    buffer_write(b, 0x00);
+    buffer_write(b, 0x00);
+    buffer_write(b, 0x00);
+
+    buffer_write(b, 0x00);
+    buffer_write(b, 0x00);
+//    ESTO ES TEMPORAL
     return REQ_OK;
 }
 
