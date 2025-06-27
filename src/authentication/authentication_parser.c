@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define CRED_FILE  "users.txt"
+#define CRED_FILE  "./src/authentication/users.txt"
 
 
 static bool
@@ -67,6 +67,7 @@ authentication_parse(AuthParser *p, buffer *b) {
                     p->uname[p->idx] = '\0';
                     p->state = PLEN;
                 }
+
                 break;
 
             case PLEN:
@@ -83,7 +84,6 @@ authentication_parse(AuthParser *p, buffer *b) {
                 p->passwd[p->idx++] = (char)c;
                 if (p->idx == p->plen) {
                     p->passwd[p->idx] = '\0';
-
                     p->auth_check = verify_credentials(p->uname, p->passwd)
                                     ? AUTH_SUCCESS : AUTH_FAILURE;
                     p->state = AUTH_END;
@@ -93,7 +93,6 @@ authentication_parse(AuthParser *p, buffer *b) {
 
             case AUTH_END:
             case AUTH_ERROR:
-                return p->state;
         }
     }
     return p->state;
@@ -113,7 +112,6 @@ AuthCodes
 fill_authentication_answer(AuthParser *p, buffer *b) {
     if (!buffer_can_write(b))
         return AUTH_REPLY_FULL_BUFFER;
-    printf("Filling Auth answer... \n");
     buffer_write(b, VERSION);
     buffer_write(b, (p->auth_check == AUTH_SUCCESS) ? 0x00 : 0x01);
     return p->auth_check == AUTH_SUCCESS;
