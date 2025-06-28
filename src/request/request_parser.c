@@ -1,6 +1,7 @@
 #include "request_parser.h"
 #include <string.h>
 #include <stdio.h>
+#include <arpa/inet.h>
 
 void init_request_parser(ReqParser *p) {
     if (p == NULL) return;
@@ -156,4 +157,36 @@ fill_request_answer(ReqParser *p, buffer *b) {
 //    ESTO ES TEMPORAL
     return REQ_OK;
 }
+const char* request_to_string(const ReqParser * p) {
+    static char aux[REQ_MAX_DN_LENGHT + 64];
+    static char to_string[REQ_MAX_DN_LENGHT];
 
+    const char *prefix;
+
+    switch (p->cmd) {
+        case CONNECT: prefix = "Command CONNECT to:"; break;
+        case BIND: prefix = "Command BIND to:"; break;
+        case UDP_ASSOCIATE: prefix = "Command UDP_ASSOCIATE to:"; break;
+        default: return "unknown unknown";
+    }
+
+    switch (p->atyp) {
+        case IPV4:
+            if (inet_ntop(AF_INET, &p->dst_addr.ipv4, to_string, sizeof(to_string)) == NULL)
+                strncpy(to_string, "unknown4", sizeof(to_string));
+            break;
+        case IPV6:
+            if (inet_ntop(AF_INET6, &p->dst_addr.ipv6, to_string, sizeof(to_string)) == NULL)
+                strncpy(to_string, "unknown6", sizeof(to_string));
+            break;
+        case DOMAINNAME:
+            strncpy(to_string, (char*)p->dst_addr.domainname + 1, p->dst_addr.domainname[0]);
+            to_string[p->dst_addr.domainname[0]] = '\0';
+            break;
+        default:
+            return "unknown unknown";
+    }
+
+    snprintf(aux, sizeof(aux), "%s %s %u", prefix, to_string, p->dst_port);
+    return aux;
+}

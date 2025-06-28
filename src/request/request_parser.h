@@ -75,7 +75,7 @@ typedef enum request_codes {
     REQ_FULLBUFFER,
 } ReqCodes;
 
-//const char * reqParserToString(const ReqParser * p);
+const char* request_to_string(const ReqParser * p);
 
 void init_request_parser(ReqParser * p);
 

@@ -32,6 +32,7 @@ unsigned request_read(struct selector_key *key) {
     buffer_write_adv(&data->read_buffer, read_count);
     request_parse(&data->client.request_parser, &data->read_buffer);
     if (has_request_read_ended(&data->client.request_parser)) {
+        printf("%s\n", request_to_string(&data->client.request_parser));
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser , &data->write_buffer)) {
             printf("No methods allowed or selector error\n");
             return ERROR;
