@@ -4,7 +4,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
-
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
 
 void request_init(const unsigned state,struct selector_key * key) {
     printf("Creating request...\n");
