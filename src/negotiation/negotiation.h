@@ -9,5 +9,4 @@
 void negotiation_init (const unsigned state, struct selector_key *key);
 unsigned negotiation_read  (struct selector_key *key);
 unsigned negotiation_write (struct selector_key *key);
-
 #endif /* TPE_PROTOS_GREETING_H */

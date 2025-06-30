@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <netdb.h>
 
 void request_init(const unsigned state,struct selector_key * key) {
     printf("Creating request...\n");
@@ -18,6 +19,74 @@ void request_init(const unsigned state,struct selector_key * key) {
     }
     init_request_parser(&socks->client.request_parser);
     printf("All request elements created!\n");
+}
+
+unsigned request_setup(struct selector_key *key) {
+    SocksClient *data = ATTACHMENT(key);
+    printf("DEBUG: Setting up request...\n");
+    ReqParser *parser = &data->client.request_parser;
+    uint8_t atyp = parser->atyp;
+    socklen_t dest_len = 0;
+    int setup_ok = 0;
+
+    struct sockaddr_storage dest_addr;
+    memset(&dest_addr, 0, sizeof(dest_addr));
+
+    if(atyp == IPV4) {
+        printf("DEBUG: IPV4\n");
+        struct sockaddr_in *addr4 = (struct sockaddr_in *)&dest_addr;
+        addr4->sin_family = AF_INET;
+        addr4->sin_addr = parser->dst_addr.ipv4;
+        addr4->sin_port = htons(parser->dst_port);
+        dest_len = sizeof(struct sockaddr_in);
+        setup_ok = 1;
+        printf("DEBUG: IPV4 setup ok\n");
+    } 
+    else if(atyp == IPV6) {
+        printf("DEBUG: IPV6\n");
+        struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&dest_addr;
+        addr6->sin6_family = AF_INET6;
+        addr6->sin6_addr = parser->dst_addr.ipv6;
+        addr6->sin6_port = htons(parser->dst_port);
+        dest_len = sizeof(struct sockaddr_in6);
+        setup_ok = 1;
+        printf("DEBUG: IPV6 setup ok\n");
+    } 
+    else if(atyp == DOMAINNAME) {
+        printf("DEBUG: DOMAINNAME\n");
+        char host[REQ_MAX_DN_LENGHT + 1] = {0};
+        memcpy(host, parser->dst_addr.domainname + 1, parser->dst_addr.domainname[0]);
+        host[parser->dst_addr.domainname[0]] = '\0';
+        char portstr[6];
+        snprintf(portstr, sizeof(portstr), "%u", parser->dst_port);
+
+        struct addrinfo hints = {0}, *res = NULL;
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        int err = getaddrinfo(host, portstr, &hints, &res);
+        if (err == 0 && res != NULL) {
+            memcpy(&dest_addr, res->ai_addr, res->ai_addrlen);
+            dest_len = res->ai_addrlen;
+            setup_ok = 1;
+            printf("DEBUG: DOMAINNAME resolved to sockaddr\n");
+            freeaddrinfo(res);
+        } else {
+            printf("DEBUG: Failed to resolve domain name: %s\n", gai_strerror(err));
+        }
+    }
+
+    if (!setup_ok) {
+        parser->status = REQ_ERROR_ADDRESS_TYPE_NOT_SUPPORTED;
+        fill_request_answer(parser, &data->write_buffer);
+        selector_set_interest_key(key, OP_WRITE);
+        return REQUEST_WRITE;
+    }
+
+    return REQUEST_WRITE;
+}
+
+void request_connect(struct selector_key *key) {
+    printf("DEBUG: Starting connection...\n");
 }
 
 unsigned request_read(struct selector_key *key) {
@@ -40,6 +109,9 @@ unsigned request_read(struct selector_key *key) {
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser , &data->write_buffer)) {
             printf("No methods allowed or selector error\n");
             return ERROR;
+        }
+        if(!has_request_errors(&data->client.request_parser)) {
+            return request_setup(key);
         }
         printf("Parsed request successfully\n");
         return REQUEST_WRITE;

@@ -123,7 +123,7 @@ bool has_request_errors(ReqParser *p) {
 
 ReqCodes
 fill_request_answer(ReqParser *p, buffer *buffer) {
-    if (!buffer_can_write(b))
+    if (!buffer_can_write(buffer))
         return REQ_FULLBUFFER;
 
     printf("Filling request answer... \n");
@@ -141,41 +141,41 @@ fill_request_answer(ReqParser *p, buffer *buffer) {
         case REQ_ERROR_ADDRESS_TYPE_NOT_SUPPORTED: rep = 0x08; break;
     }
 
-    buffer_write(b, SOCKS_VERSION);
-    buffer_write(b, rep);
-    buffer_write(b, 0x00);
-    buffer_write(b, p->atyp);
+    buffer_write(buffer, SOCKS_VERSION);
+    buffer_write(buffer, rep);
+    buffer_write(buffer, 0x00);
+    buffer_write(buffer, p->atyp);
 
     if (p->atyp == IPV4) {
         const uint8_t *addr = (const uint8_t *)&p->dst_addr.ipv4;
         for (int i = 0; i < 4; ++i) {
-            if (!buffer_can_write(b)) return REQ_FULLBUFFER;
-            buffer_write(b, addr[i]);
+            if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
+            buffer_write(buffer, addr[i]);
         }
     } else if (p->atyp == DOMAINNAME) {
         const uint8_t *addr = (const uint8_t *)p->dst_addr.domainname + 1;
         uint8_t len = p->dst_addr.domainname[0];
-        if (!buffer_can_write(b)) return REQ_FULLBUFFER;
-        buffer_write(b, len);
+        if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
+        buffer_write(buffer, len);
         for (int i = 0; i < len; ++i) {
-            if (!buffer_can_write(b)) return REQ_FULLBUFFER;
-            buffer_write(b, addr[i]);
+            if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
+            buffer_write(buffer, addr[i]);
         }
     } else if (p->atyp == IPV6) {
         const uint8_t *addr = (const uint8_t *)&p->dst_addr.ipv6;
         for (int i = 0; i < 16; ++i) {
-            if (!buffer_can_write(b)) return REQ_FULLBUFFER;
-            buffer_write(b, addr[i]);
+            if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
+            buffer_write(buffer, addr[i]);
         }
     } else {
         for (int i = 0; i < 4; ++i) {
-            if (!buffer_can_write(b)) return REQ_FULLBUFFER;
-            buffer_write(b, 0x00);
+            if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
+            buffer_write(buffer, 0x00);
         }
     }
 
-    buffer_write(b, (p->dst_port >> 8) & 0xFF);
-    buffer_write(b, p->dst_port & 0xFF);
+    buffer_write(buffer, (p->dst_port >> 8) & 0xFF);
+    buffer_write(buffer, p->dst_port & 0xFF);
 
     return REQ_OK;
 }
