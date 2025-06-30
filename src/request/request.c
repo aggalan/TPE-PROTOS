@@ -40,7 +40,11 @@ unsigned request_setup(struct selector_key *key) {
         addr4->sin_port = htons(parser->dst_port);
         dest_len = sizeof(struct sockaddr_in);
         setup_ok = 1;
-        printf("DEBUG: IPV4 setup ok\n");
+        char ipstr[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &addr4->sin_addr, ipstr, sizeof(ipstr));
+        printf("[DEBUG] IPV4 setup ok: %s:%d\n", ipstr, ntohs(addr4->sin_port));
+        request_connect(key);
+
     } 
     else if(atyp == IPV6) {
         printf("DEBUG: IPV6\n");
@@ -50,7 +54,11 @@ unsigned request_setup(struct selector_key *key) {
         addr6->sin6_port = htons(parser->dst_port);
         dest_len = sizeof(struct sockaddr_in6);
         setup_ok = 1;
-        printf("DEBUG: IPV6 setup ok\n");
+        char ipstr[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
+        printf("[DEBUG] IPV6 setup ok: [%s]:%d\n", ipstr, ntohs(addr6->sin6_port));
+        request_connect(key);
+
     } 
     else if(atyp == DOMAINNAME) {
         printf("DEBUG: DOMAINNAME\n");
@@ -68,7 +76,26 @@ unsigned request_setup(struct selector_key *key) {
             memcpy(&dest_addr, res->ai_addr, res->ai_addrlen);
             dest_len = res->ai_addrlen;
             setup_ok = 1;
-            printf("DEBUG: DOMAINNAME resolved to sockaddr\n");
+            char ipstr[INET6_ADDRSTRLEN];
+            void *addrptr = NULL;
+            int port = 0;
+            if (res->ai_family == AF_INET) {
+                struct sockaddr_in *sin = (struct sockaddr_in *)res->ai_addr;
+                addrptr = &sin->sin_addr;
+                port = ntohs(sin->sin_port);
+                inet_ntop(AF_INET, addrptr, ipstr, sizeof(ipstr));
+                printf("[DEBUG] DOMAINNAME resolved to: %s:%d\n", ipstr, port);
+                request_connect(key);
+
+            } else if (res->ai_family == AF_INET6) {
+                struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)res->ai_addr;
+                addrptr = &sin6->sin6_addr;
+                port = ntohs(sin6->sin6_port);
+                inet_ntop(AF_INET6, addrptr, ipstr, sizeof(ipstr));
+                printf("[DEBUG] DOMAINNAME resolved to: [%s]:%d\n", ipstr, port);
+                request_connect(key);
+
+            }
             freeaddrinfo(res);
         } else {
             printf("DEBUG: Failed to resolve domain name: %s\n", gai_strerror(err));
