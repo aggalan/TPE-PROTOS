@@ -11,6 +11,9 @@
 #include <errno.h>
 #include <netdb.h>
 
+unsigned request_create_connection(struct selector_key *key);
+unsigned request_error(SocksClient *data, struct selector_key *key, unsigned status);
+
 void request_init(const unsigned state,struct selector_key * key) {
     printf("Creating request...\n");
     SocksClient *socks = ATTACHMENT(key);
@@ -43,7 +46,7 @@ unsigned request_setup(struct selector_key *key) {
         char ipstr[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &addr4->sin_addr, ipstr, sizeof(ipstr));
         printf("[DEBUG] IPV4 setup ok: %s:%d\n", ipstr, ntohs(addr4->sin_port));
-        request_connect(key);
+        request_create_connection(key);
 
     } 
     else if(atyp == IPV6) {
@@ -57,7 +60,7 @@ unsigned request_setup(struct selector_key *key) {
         char ipstr[INET6_ADDRSTRLEN];
         inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
         printf("[DEBUG] IPV6 setup ok: [%s]:%d\n", ipstr, ntohs(addr6->sin6_port));
-        request_connect(key);
+        request_create_connection(key);
 
     } 
     else if(atyp == DOMAINNAME) {
@@ -85,7 +88,7 @@ unsigned request_setup(struct selector_key *key) {
                 port = ntohs(sin->sin_port);
                 inet_ntop(AF_INET, addrptr, ipstr, sizeof(ipstr));
                 printf("[DEBUG] DOMAINNAME resolved to: %s:%d\n", ipstr, port);
-                request_connect(key);
+                request_create_connection(key);
 
             } else if (res->ai_family == AF_INET6) {
                 struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)res->ai_addr;
@@ -93,7 +96,7 @@ unsigned request_setup(struct selector_key *key) {
                 port = ntohs(sin6->sin6_port);
                 inet_ntop(AF_INET6, addrptr, ipstr, sizeof(ipstr));
                 printf("[DEBUG] DOMAINNAME resolved to: [%s]:%d\n", ipstr, port);
-                request_connect(key);
+                request_create_connection(key);
 
             }
             freeaddrinfo(res);
@@ -114,6 +117,49 @@ unsigned request_setup(struct selector_key *key) {
 
 void request_connect(struct selector_key *key) {
     printf("DEBUG: Starting connection...\n");
+    SocksClient *data = ATTACHMENT(key);
+    
+}
+
+unsigned request_create_connection(struct selector_key *key) {
+    printf("DEBUG: Creating socket...\n");
+    SocksClient * data = ATTACHMENT(key);
+    data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | SOCK_NONBLOCK, data->origin_resolution->ai_protocol);
+    if(data->origin_fd < 0){
+        data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | SOCK_NONBLOCK, data->origin_resolution->ai_protocol);
+        if(data->origin_fd < 0){
+            printf("Failed to create socket from client %d\n",data->origin_fd);
+            return ERROR;
+        }
+    }
+
+    selector_fd_set_nio(data->origin_fd);
+
+    if(connect(data->origin_fd, &data->origin_resolution->ai_addr, data->origin_resolution->ai_addrlen) == 0){
+        printf("Connected to origin server for client %d\n",data->origin_fd);
+        return REQUEST_CONNECTING;
+    }
+
+    if(data->origin_resolution->ai_next != NULL){
+        selector_unregister_fd(key->s, data->origin_fd); //Unregistereamos el Socket fallido del Selector
+        close(data->origin_fd); //Lo Cerramos (duh)
+        struct addrinfo *next = data->origin_resolution->ai_next; //Preparamos el proximo
+        data->origin_resolution->ai_next = NULL; //Lo detacheamos de la Lista para hacerle free
+        freeaddrinfo(data->origin_resolution); //Free
+        data->origin_resolution = next; //Vamos al proximo
+        return request_create_connection(key); //Empezamos again
+    }
+    return request_error(data, key, -1);
+}
+
+//@TODO: Mandar cosas aca para no reutilizar codigo!!!!
+unsigned request_error(SocksClient *data, struct selector_key *key, unsigned status){
+    ReqParser *parser = &data->client.request_parser;
+    parser->status = status;
+    parser->state = REQ_ERROR;
+    fill_request_answer(parser, &data->write_buffer);
+    selector_set_interest_key(key, OP_WRITE);
+    return REQUEST_WRITE;
 }
 
 unsigned request_read(struct selector_key *key) {

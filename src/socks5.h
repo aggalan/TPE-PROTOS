@@ -20,6 +20,9 @@ enum socks_v5state {
     AUTHENTICATION_WRITE,
     REQUEST_READ,
     REQUEST_WRITE,
+    REQUEST_CONNECTING,
+    ORIGIN_CONNECT,
+    ORIGIN_CONNECT_WRITE,
     DONE,
     ERROR,
 };
@@ -34,6 +37,8 @@ typedef struct socks5 {
     bool                       closed;
     struct state_machine       stm;
     struct sockaddr_storage    client_addr;
+    struct addrinfo*            origin_resolution;
+    
     socklen_t                  client_addr_len;
     union {
         NegParser negotiation_parser;

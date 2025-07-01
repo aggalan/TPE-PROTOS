@@ -5,6 +5,8 @@
 #include "../buffer.h"
 #include "../selector.h"
 #include "request_parser.h"
+#include <sys/socket.h>
+#include <errno.h>
 
 void request_init (const unsigned state, struct selector_key *key);
 unsigned request_read (struct selector_key *key);

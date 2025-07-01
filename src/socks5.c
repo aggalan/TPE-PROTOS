@@ -21,12 +21,21 @@
 #include "./request/request.h"
 
 #define BUFFER_SIZE 4096
-
+#define FD_UPPER_LIMIT 1024
+#define ERROR_CODE -1
 
 
 static void socksv5_read(struct selector_key *key);
 static void socksv5_write(struct selector_key *key);
 static void socksv5_close(struct selector_key *key);
+void arrival_error(struct selector_key *key){
+    fprintf(stderr, "Error in socksv5\n");
+}
+void arrival_done(struct selector_key *key){
+    printf("Socksv5 done\n");
+}
+
+
 static const struct fd_handler socks5_handler = {
     .handle_read = socksv5_read,
     .handle_write = socksv5_write,
@@ -35,55 +44,55 @@ static const struct fd_handler socks5_handler = {
 
 
 static const struct state_definition client_actions[] = {
+    /* === Negotiation phase === */
     {
         .state        = NEGOTIATION_READ,
         .on_arrival   = negotiation_init,
         .on_read_ready  = negotiation_read,
-},
-{
-    .state        = NEGOTIATION_WRITE,
-    .on_write_ready = negotiation_write,
-},
-{
-    .state        = AUTHENTICATION_READ,
-    .on_arrival   = authentication_init,
-    .on_read_ready  = authentication_read,
-},{
-    .state        = AUTHENTICATION_WRITE,
-    .on_write_ready = authentication_write,
-},
-{
-    .state = REQUEST_READ,
-    .on_arrival = request_init,
-    .on_read_ready = request_read,
-},
-{
+    },
+    {
+        .state        = NEGOTIATION_WRITE,
+        .on_write_ready = negotiation_write,
+    },
+        /* === Authentication phase === */
+    {
+        .state        = AUTHENTICATION_READ,
+        .on_arrival   = authentication_init,
+        .on_read_ready  = authentication_read,
+    },
+    {
+        .state        = AUTHENTICATION_WRITE,
+        .on_write_ready = authentication_write,
+    },
+    /* === Request phase === */
+    {
+        .state = REQUEST_READ,
+        .on_arrival = request_init,
+        .on_read_ready = request_read,
+    },
+    {
         .state = REQUEST_WRITE,
         .on_write_ready = request_write,
     },
-
-{
-    .state        = DONE,
-//    .on_departure = socksv5_done,
-},
-{
-    .state        = ERROR,
-//    .on_departure = socksv5_error,
-}
+    /* === Terminal states === */
+    {
+        .state        = DONE,
+        .on_arrival = arrival_done,
+    },
+    {
+        .state        = ERROR,
+        .on_arrival = arrival_error,
+    }
 };
 
 
 
-
+//@TODO: Agregar Origin (?)
 SocksClient *socks5_new(const int client_fd, const struct sockaddr_storage *client_addr,const socklen_t client_addr_len){
     SocksClient * ret = calloc(1, sizeof(SocksClient));
-    if (ret == NULL)
-    {
-        goto fail;
-    }
-
+    if (ret == NULL) goto fail;
     ret->client_fd = client_fd;
-    ret->origin_fd = -1;
+    ret->origin_fd = ERROR_CODE;
     ret->client_addr = *client_addr;
     ret->client_addr_len = client_addr_len;
     ret->closed = false;
@@ -91,15 +100,16 @@ SocksClient *socks5_new(const int client_fd, const struct sockaddr_storage *clie
     static uint8_t r_buffer[BUFFER_SIZE], w_buffer[BUFFER_SIZE];
     buffer_init(&ret->read_buffer, BUFFER_SIZE, r_buffer);
     buffer_init(&ret->write_buffer, BUFFER_SIZE, w_buffer);
+    //State Machine Set up
     ret->stm.initial = NEGOTIATION_READ;
     ret->stm.states = client_actions;
     ret->stm.max_state = ERROR;
     ret->closed = false;
-    stm_init(&ret->stm);
-
+    stm_init(&(ret->stm));
     return ret;
 
 fail:
+    fprintf(stderr,"couldn't allocate memory to create client[fd=%d]",ret->client_fd);
     if (ret != NULL)
     {
         free(ret);
@@ -113,14 +123,21 @@ void socksv5_passive_accept(struct selector_key *key){
     struct sockaddr_storage client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
     struct socks5 *state = NULL;
-
     const int client = accept(key->fd, (struct sockaddr *)&client_addr, &client_addr_len);
-    if (client == -1)
+    if (client < 0)
     {
+        fprintf(stderr,"Socks socket: accept() has returned a negative value: %d\n", client);
         goto fail;
     }
-    if (selector_fd_set_nio(client) == -1)
+    if (client >= FD_UPPER_LIMIT)
     {
+        close(client);
+        fprintf(stderr,"Socks fd was too high\n");   
+        goto fail;
+    }
+    if (selector_fd_set_nio(client) == ERROR_CODE)
+    {
+        fprintf(stderr, "Couldn't set socket non-blocking\n");
         goto fail;
     }
     state = socks5_new(client, &client_addr, client_addr_len);
@@ -129,15 +146,17 @@ void socksv5_passive_accept(struct selector_key *key){
     {
         goto fail;
     }
+
     if (SELECTOR_SUCCESS != selector_register(key->s, client, &socks5_handler,OP_READ, state))
     {
+        fprintf(stderr, "Couldn't register the socket\n");
         goto fail;
     }
     return;
 
 fail:
-    printf("fail\n");
-    if (client != -1)
+    printf("======== SOCKET FAILED ========\n");
+    if (client != ERROR_CODE)
     {
         close(client);
     }
@@ -168,8 +187,50 @@ socksv5_write(struct selector_key *key){
 }
 
 
-static void socksv5_close(struct selector_key *key){
-    // socks5_destroy(ATTACHMENT(key));
+static void socksv5_close(struct selector_key *key)
+{ 
+    struct state_machine* stm = &ATTACHMENT(key)->stm;
+
+}
+
+void _closeConnection(struct selector_key *key)
+{
+    SocksClient* data = ATTACHMENT(key);
+
+    if (data->closed) return;
+
+    data->closed = true;
+    //@TODO: add to metrics
+    printf("Socks client %d disconected",key->fd);
+
+    int clientSocket = data->client_fd;
+    int serverSocket = data->origin_fd;
+
+    if (serverSocket != ERROR_CODE)
+    {
+        selector_unregister_fd(key->s,serverSocket);
+        close(serverSocket);
+    }
+    if (clientSocket != ERROR_CODE)
+    {
+        selector_unregister_fd(key->s,clientSocket);
+        close(serverSocket);
+    }
+
+    if (data->origin_resolution != NULL)
+    {
+        if (data->client.request_parser.atyp != DOMAINNAME)
+        {
+            free(data->origin_resolution->ai_addr);
+            free(data->origin_resolution);
+        }
+        else
+        {
+            freeaddrinfo(data->origin_resolution);
+        }
+    }
+    free(data);
+
 }
 
 // static void
