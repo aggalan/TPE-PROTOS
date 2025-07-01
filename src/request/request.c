@@ -26,8 +26,8 @@ unsigned request_setup(struct selector_key *key) {
     printf("DEBUG: Setting up request...\n");
     ReqParser *parser = &data->client.request_parser;
     uint8_t atyp = parser->atyp;
-    socklen_t dest_len = 0;
-    int setup_ok = 0;
+    socklen_t dest_len = 0; //TODO: check
+    int setup_ok = 0; //TODO: check
 
     struct sockaddr_storage dest_addr;
     memset(&dest_addr, 0, sizeof(dest_addr));
