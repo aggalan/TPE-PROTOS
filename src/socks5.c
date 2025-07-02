@@ -74,6 +74,10 @@ static const struct state_definition client_actions[] = {
         .state = REQUEST_WRITE,
         .on_write_ready = request_write,
     },
+/*   {
+        .state = REQUEST_CONNECTING,
+        .on_ready = request_connecting,
+    },*/ 
     /* === Terminal states === */
     {
         .state        = DONE,
