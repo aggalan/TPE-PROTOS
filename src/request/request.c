@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
@@ -38,10 +39,25 @@ unsigned request_setup(struct selector_key *key) {
     if(atyp == IPV4) {
         printf("DEBUG: IPV4\n");
         struct sockaddr_in *addr4 = (struct sockaddr_in *)&dest_addr;
-        addr4->sin_family = AF_INET;
-        addr4->sin_addr = parser->dst_addr.ipv4;
-        addr4->sin_port = htons(parser->dst_port);
+        *addr4 = (struct sockaddr_in){
+            .sin_family = AF_INET,
+            .sin_addr = parser->dst_addr.ipv4,
+            .sin_port = htons(parser->dst_port)
+        };
         dest_len = sizeof(struct sockaddr_in);
+        data->origin_resolution = malloc(sizeof(struct addrinfo));
+        if(data->origin_resolution == NULL){
+            printf("Failed to allocate memory for origin resolution\n");
+            free(addr4);
+            return REQUEST_WRITE;
+        }
+        *data->origin_resolution = (struct addrinfo){
+            .ai_family = AF_INET,
+            .ai_socktype = SOCK_STREAM,
+            .ai_protocol = IPPROTO_TCP,
+            .ai_addrlen = sizeof(struct sockaddr_in),
+            .ai_addr = (struct sockaddr *)addr4,
+        };
         setup_ok = 1;
         char ipstr[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &addr4->sin_addr, ipstr, sizeof(ipstr));
@@ -52,10 +68,25 @@ unsigned request_setup(struct selector_key *key) {
     else if(atyp == IPV6) {
         printf("DEBUG: IPV6\n");
         struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&dest_addr;
-        addr6->sin6_family = AF_INET6;
-        addr6->sin6_addr = parser->dst_addr.ipv6;
-        addr6->sin6_port = htons(parser->dst_port);
+        *addr6 = (struct sockaddr_in6){
+            .sin6_family = AF_INET6,
+            .sin6_addr = parser->dst_addr.ipv6,
+            .sin6_port = htons(parser->dst_port)
+        };
         dest_len = sizeof(struct sockaddr_in6);
+        data->origin_resolution = malloc(sizeof(struct addrinfo));
+        if(data->origin_resolution == NULL){
+            printf("Failed to allocate memory for origin resolution\n");
+            free(addr6);
+            return REQUEST_WRITE;
+        }
+        *data->origin_resolution = (struct addrinfo){
+            .ai_family = AF_INET6,
+            .ai_socktype = SOCK_STREAM,
+            .ai_protocol = IPPROTO_TCP,
+            .ai_addrlen = sizeof(struct sockaddr_in6),
+            .ai_addr = (struct sockaddr *)addr6,
+        };
         setup_ok = 1;
         char ipstr[INET6_ADDRSTRLEN];
         inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
@@ -88,18 +119,16 @@ unsigned request_setup(struct selector_key *key) {
                 port = ntohs(sin->sin_port);
                 inet_ntop(AF_INET, addrptr, ipstr, sizeof(ipstr));
                 printf("[DEBUG] DOMAINNAME resolved to: %s:%d\n", ipstr, port);
-                request_create_connection(key);
-
             } else if (res->ai_family == AF_INET6) {
                 struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)res->ai_addr;
                 addrptr = &sin6->sin6_addr;
                 port = ntohs(sin6->sin6_port);
                 inet_ntop(AF_INET6, addrptr, ipstr, sizeof(ipstr));
                 printf("[DEBUG] DOMAINNAME resolved to: [%s]:%d\n", ipstr, port);
-                request_create_connection(key);
-
             }
-            freeaddrinfo(res);
+            
+            data->origin_resolution = res;
+            request_create_connection(key);
         } else {
             printf("DEBUG: Failed to resolve domain name: %s\n", gai_strerror(err));
         }
@@ -124,7 +153,9 @@ void request_connect(struct selector_key *key) {
 unsigned request_create_connection(struct selector_key *key) {
     printf("DEBUG: Creating socket...\n");
     SocksClient * data = ATTACHMENT(key);
+    printf("Creating socket...\n");
     data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | SOCK_NONBLOCK, data->origin_resolution->ai_protocol);
+    printf("Socket Correctly!\n");
     if(data->origin_fd < 0){
         data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | SOCK_NONBLOCK, data->origin_resolution->ai_protocol);
         if(data->origin_fd < 0){
@@ -149,6 +180,7 @@ unsigned request_create_connection(struct selector_key *key) {
         data->origin_resolution = next; //Vamos al proximo
         return request_create_connection(key); //Empezamos again
     }
+
     return request_error(data, key, -1);
 }
 

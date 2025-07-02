@@ -29,7 +29,7 @@ static void socksv5_read(struct selector_key *key);
 static void socksv5_write(struct selector_key *key);
 static void socksv5_close(struct selector_key *key);
 void arrival_error(struct selector_key *key){
-    fprintf(stderr, "Error in socksv5\n");
+    fprintf(stderr, "Error in arrival at socksv5\n");
 }
 void arrival_done(struct selector_key *key){
     printf("Socksv5 done\n");
