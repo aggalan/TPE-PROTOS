@@ -153,10 +153,10 @@ unsigned request_setup(struct selector_key *key) {
     return REQUEST_WRITE;
 }
 
-void request_connect(struct selector_key *key) {
+unsigned request_connect(struct selector_key *key) {
     printf("DEBUG: Starting connection...\n");
     SocksClient *data = ATTACHMENT(key);
-    
+    return REQUEST_WRITE;
 }
 
 unsigned request_create_connection(struct selector_key *key) {
@@ -172,17 +172,21 @@ unsigned request_create_connection(struct selector_key *key) {
             return ERROR;
         }
     }
-    LOG_INFO("request_create_connection: Before selector \n");
-    selector_fd_set_nio(data->origin_fd);
-    LOG_INFO("request_create_connection: After selector \n");
 
+    selector_fd_set_nio(data->origin_fd);
 
     if(connect(data->origin_fd, data->origin_resolution->ai_addr, data->origin_resolution->ai_addrlen) == 0 || errno == EINPROGRESS){
-        printf("Connected to origin server for client %d\n",data->origin_fd);
+        if (selector_register(key->s, data->origin_fd, get_fd_handler() , OP_WRITE, data) != SELECTOR_SUCCESS) {
+            LOG_ERROR("Failed to register origin fd %d in selector\n", data->origin_fd);
+            close(data->origin_fd);
+            return ERROR;
+        }else if (selector_set_interest(key->s, key->fd,OP_NOOP) != SELECTOR_SUCCESS) {
+            LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
+            return ERROR;
+        }
+        LOG_INFO("request_create_connection: Attemping connection with Client Number %d\n",data->origin_fd);
         return REQUEST_CONNECTING;
     }
-
-    LOG_INFO("request_create_connection:Connection Failed :/ \n");
 
     if(data->origin_resolution->ai_next != NULL){
         selector_unregister_fd(key->s, data->origin_fd); //Unregistereamos el Socket fallido del Selector

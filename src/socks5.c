@@ -37,6 +37,11 @@ static const struct fd_handler socks5_handler = {
 };
 
 
+const fd_handler * get_fd_handler() {
+    return &socks5_handler;
+}
+
+
 void socksv5_done(const unsigned state, struct selector_key * key);
 void socksv5_error(const unsigned state, struct selector_key * key);
 

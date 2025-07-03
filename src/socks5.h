@@ -54,6 +54,7 @@ void socksv5_handle_read(struct selector_key* key);
 void socksv5_handle_write(struct selector_key* key);
 void socksv5_handle_close(struct selector_key* key);
 void socksv5_pool_destroy(void);
+const fd_handler * get_fd_handler();
 
 
 #endif
