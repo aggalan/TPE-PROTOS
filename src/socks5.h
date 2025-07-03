@@ -20,11 +20,11 @@ enum socks_v5state {
     AUTHENTICATION_WRITE,
     REQUEST_READ,
     REQUEST_WRITE,
+    REQUEST_CONNECTING,
     DONE,
     ERROR,
     ORIGIN_CONNECT,
     ORIGIN_CONNECT_WRITE,
-    REQUEST_CONNECTING,
 };
 
 #define ATTACHMENT(key) ((struct socks5 *)(key)->data)

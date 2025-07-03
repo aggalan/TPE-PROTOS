@@ -121,61 +121,28 @@ bool has_request_errors(ReqParser *p) {
     return p == NULL || p->state == REQ_ERROR;
 }
 
-ReqCodes
-fill_request_answer(ReqParser *p, buffer *buffer) {
+ReqCodes fill_request_answer(ReqParser *p, buffer *buffer) {
     if (!buffer_can_write(buffer))
         return REQ_FULLBUFFER;
 
+    uint8_t answer[10] = {
+        0x05, // Version
+        p->status, // REP:
+        0x00, // RSV
+        p->atyp, // ATYP: IPv4
+        0x00, 0x00, 0x00, 0x00, // BND.ADDR (set to 0.0.0.0 for now)
+        0x00, 0x00 // BND.PORT (set to 0 for now)
+    };
+
+
     printf("Filling request answer... \n");
 
-    uint8_t rep = 0x01;
-    switch (p->status) {
-        case REQ_SUCCEDED:                       rep = 0x00; break;
-        case REQ_ERROR_GENERAL_FAILURE:          rep = 0x01; break;
-        case REQ_ERROR_CONNECTION_NOT_ALLOWED:   rep = 0x02; break;
-        case REQ_ERROR_NTW_UNREACHABLE:          rep = 0x03; break;
-        case REQ_ERROR_HOST_UNREACHABLE:         rep = 0x04; break;
-        case REQ_ERROR_CONNECTION_REFUSED:       rep = 0x05; break;
-        case REQ_ERROR_TTL_EXPIRED:              rep = 0x06; break;
-        case REQ_ERROR_COMMAND_NOT_SUPPORTED:    rep = 0x07; break;
-        case REQ_ERROR_ADDRESS_TYPE_NOT_SUPPORTED: rep = 0x08; break;
+    for (int i = 0; i < 10; i++) {
+        if (!buffer_can_write(buffer)) {
+            return REQ_FULLBUFFER;
+        }
+        buffer_write(buffer, answer[i]);
     }
-
-    buffer_write(buffer, SOCKS_VERSION);
-    buffer_write(buffer, rep);
-    buffer_write(buffer, 0x00);
-    buffer_write(buffer, p->atyp);
-
-    if (p->atyp == IPV4) {
-        const uint8_t *addr = (const uint8_t *)&p->dst_addr.ipv4;
-        for (int i = 0; i < 4; ++i) {
-            if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
-            buffer_write(buffer, addr[i]);
-        }
-    } else if (p->atyp == DOMAINNAME) {
-        const uint8_t *addr = (const uint8_t *)p->dst_addr.domainname + 1;
-        uint8_t len = p->dst_addr.domainname[0];
-        if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
-        buffer_write(buffer, len);
-        for (int i = 0; i < len; ++i) {
-            if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
-            buffer_write(buffer, addr[i]);
-        }
-    } else if (p->atyp == IPV6) {
-        const uint8_t *addr = (const uint8_t *)&p->dst_addr.ipv6;
-        for (int i = 0; i < 16; ++i) {
-            if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
-            buffer_write(buffer, addr[i]);
-        }
-    } else {
-        for (int i = 0; i < 4; ++i) {
-            if (!buffer_can_write(buffer)) return REQ_FULLBUFFER;
-            buffer_write(buffer, 0x00);
-        }
-    }
-
-    buffer_write(buffer, (p->dst_port >> 8) & 0xFF);
-    buffer_write(buffer, p->dst_port & 0xFF);
 
     return REQ_OK;
 }

@@ -71,7 +71,7 @@ unsigned request_setup(struct selector_key *key) {
         char ipstr[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &addr4->sin_addr, ipstr, sizeof(ipstr));
         printf("[DEBUG] IPV4 setup ok: %s:%d\n", ipstr, ntohs(addr4->sin_port));
-        request_create_connection(key);
+        return request_create_connection(key);
 
     } 
     else if(atyp == IPV6) {
@@ -100,7 +100,7 @@ unsigned request_setup(struct selector_key *key) {
         char ipstr[INET6_ADDRSTRLEN];
         inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
         printf("[DEBUG] IPV6 setup ok: [%s]:%d\n", ipstr, ntohs(addr6->sin6_port));
-        request_create_connection(key);
+         request_create_connection(key);
 
     } 
     else if(atyp == DOMAINNAME) {
@@ -153,9 +153,24 @@ unsigned request_setup(struct selector_key *key) {
     return REQUEST_WRITE;
 }
 
-unsigned request_connect(struct selector_key *key) {
-    printf("DEBUG: Starting connection...\n");
+void request_connecting_init(const unsigned state,struct selector_key *key) {
+    LOG_INFO("Starting connection...\n");
+}
+
+unsigned request_connecting(struct selector_key *key) {
     SocksClient *data = ATTACHMENT(key);
+    int error = 0;
+    if (getsockopt(data->origin_fd, SOL_SOCKET, SO_ERROR, &error, &(socklen_t){sizeof(int)})) {
+        LOG_ERROR("Failed to get socket options for origin fd %d\n", data->origin_fd);
+        return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
+    }
+
+    //mandar la respuesta
+    if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser, &data->write_buffer)) {
+        LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
+        return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
+    }
+    printf("CONNECTED!");
     return REQUEST_WRITE;
 }
 
@@ -180,11 +195,12 @@ unsigned request_create_connection(struct selector_key *key) {
             LOG_ERROR("Failed to register origin fd %d in selector\n", data->origin_fd);
             close(data->origin_fd);
             return ERROR;
-        }else if (selector_set_interest(key->s, key->fd,OP_NOOP) != SELECTOR_SUCCESS) {
+        }
+        if (selector_set_interest(key->s, key->fd,OP_NOOP) != SELECTOR_SUCCESS) {
             LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
             return ERROR;
         }
-        LOG_INFO("request_create_connection: Attemping connection with Client Number %d\n",data->origin_fd);
+        LOG_INFO("Attemping connection with Client Number %d\n",data->origin_fd);
         return REQUEST_CONNECTING;
     }
 
@@ -248,8 +264,13 @@ unsigned request_write(struct selector_key *key) {
     size_t write_size;
 
     uint8_t * write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
+    printf("Buffer to send (%zu bytes):", write_size);
+    for (size_t i = 0; i < write_size; i++) {
+        printf(" %02x", write_buffer[i]);
+    }
+    printf("\n");
     ssize_t write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL);
-
+    printf("Sent %zu bytes\n", write_count);
     if (write_count < 0) {
         printf("request response send error\n");
         return ERROR;
