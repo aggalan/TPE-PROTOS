@@ -26,6 +26,7 @@
 
 #include "socks5.h"
 #include "selector.h"
+#include "logging/logger.h"
 //#include "socks5nio.h"
 
 static bool done = false;
@@ -35,7 +36,10 @@ static void sigterm_handler(const int signal) {
     done = true;
 }
 
+
 int main(const int argc, const char** argv) {
+    logger_init();
+    logger_parse_args(argc, (char**)argv);
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
     unsigned port = 1080;
