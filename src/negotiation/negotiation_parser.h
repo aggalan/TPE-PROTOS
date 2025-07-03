@@ -16,7 +16,7 @@
  */
 
 // Forward declaration del tipo buffer
-typedef struct buffer buffer;
+// typedef struct buffer buffer;
 
 /**
  * @brief Estados del parser de negociación
