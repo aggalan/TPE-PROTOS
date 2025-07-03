@@ -67,7 +67,7 @@ AuthState parse_version(AuthParser * parser, uint8_t byte){
     LOG_INFO("parse_version: Client started negotiation for version %d \n",byte);
     if(byte != AUTH_VERSION_USER_PASS){
         LOG_INFO("parse_version: Oof! Ouch! Version %d is invalid :/\n",byte);
-        return AUTH_REPLY_BAD_VERSION;
+        return AUTH_ERROR;
     }
     return USER_LENGTH;
 }
@@ -123,7 +123,8 @@ AuthState parse_end(AuthParser * parser, uint8_t byte){
 
 AuthState parse_error(AuthParser * parser, uint8_t byte){
     LOG_INFO("parse_error: Error in Authentification. \n");
-
+    return AUTH_ERROR;
+    //IDK
 }
 
 bool has_authentication_read_ended(AuthParser *p) {

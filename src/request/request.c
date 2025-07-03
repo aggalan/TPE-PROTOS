@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <netdb.h>
+#include <sys/fcntl.h>
 
 unsigned request_create_connection(struct selector_key *key);
 unsigned request_error(SocksClient *data, struct selector_key *key, unsigned status);
@@ -155,10 +156,10 @@ unsigned request_create_connection(struct selector_key *key) {
     printf("DEBUG: Creating socket...\n");
     SocksClient * data = ATTACHMENT(key);
     printf("Creating socket...\n");
-    data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | SOCK_NONBLOCK, data->origin_resolution->ai_protocol);
+    data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | O_NONBLOCK, data->origin_resolution->ai_protocol);
     printf("Socket Correctly!\n");
     if(data->origin_fd < 0){
-        data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | SOCK_NONBLOCK, data->origin_resolution->ai_protocol);
+        data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | O_NONBLOCK, data->origin_resolution->ai_protocol);
         if(data->origin_fd < 0){
             printf("Failed to create socket from client %d\n",data->origin_fd);
             return ERROR;
@@ -167,7 +168,7 @@ unsigned request_create_connection(struct selector_key *key) {
 
     selector_fd_set_nio(data->origin_fd);
 
-    if(connect(data->origin_fd, &data->origin_resolution->ai_addr, data->origin_resolution->ai_addrlen) == 0){
+    if(connect(data->origin_fd, data->origin_resolution->ai_addr, data->origin_resolution->ai_addrlen) == 0){
         printf("Connected to origin server for client %d\n",data->origin_fd);
         return REQUEST_CONNECTING;
     }

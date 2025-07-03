@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include "selector.h"
+#include "tests.h"
 #include "socks5.h"
 #include "buffer.h"
 #include "stm.h"
@@ -27,12 +28,6 @@
 static void socksv5_read(struct selector_key *key);
 static void socksv5_write(struct selector_key *key);
 static void socksv5_close(struct selector_key *key);
-void arrival_error(struct selector_key *key){
-    fprintf(stderr, "Error in arrival at socksv5\n");
-}
-void arrival_done(struct selector_key *key){
-    printf("Socksv5 done\n");
-}
 
 
 static const struct fd_handler socks5_handler = {
@@ -41,6 +36,9 @@ static const struct fd_handler socks5_handler = {
     .handle_close = socksv5_close,
 };
 
+
+void socksv5_done(const unsigned state, struct selector_key * key);
+void socksv5_error(const unsigned state, struct selector_key * key);
 
 static const struct state_definition client_actions[] = {
     /* === Negotiation phase === */
@@ -76,11 +74,11 @@ static const struct state_definition client_actions[] = {
     /* === Terminal states === */
     {
         .state        = DONE,
-        .on_arrival = arrival_done,
+        .on_arrival = socksv5_done,
     },
     {
         .state        = ERROR,
-        .on_arrival = arrival_error,
+        .on_arrival = socksv5_error,
     }
 };
 
@@ -189,6 +187,8 @@ socksv5_write(struct selector_key *key){
 static void socksv5_close(struct selector_key *key)
 { 
     struct state_machine* stm = &ATTACHMENT(key)->stm;
+    stm_handler_close(stm, key);
+    //TODO: close connection
 
 }
 
@@ -232,27 +232,27 @@ void _closeConnection(struct selector_key *key)
 
 }
 
-// static void
-// socksv5_done(struct selector_key *key)
-// {
-//     const int fds[] = {
-//         ATTACHMENT(key)->client_fd,
-//         ATTACHMENT(key)->origin_fd,
-//     };
-//     for (unsigned i = 0; i < N(fds); i++)
-//     {
-//         if (fds[i] != -1)
-//         {
-//             if (SELECTOR_SUCCESS != selector_unregister_fd(key->s, fds[i]))
-//             {
-//                 abort();
-//             }
-//             close(fds[i]);
-//         }
-//     }
-// }
+void socksv5_done(const unsigned state, struct selector_key * key)
+{
+    printf("Socks5 done\n");
+    const int fds[] = {
+        ATTACHMENT(key)->client_fd,
+        ATTACHMENT(key)->origin_fd,
+    };
+    for (unsigned i = 0; i < N(fds); i++)
+    {
+        if (fds[i] != -1)
+        {
+            if (SELECTOR_SUCCESS != selector_unregister_fd(key->s, fds[i]))
+            {
+                abort();
+            }
+            close(fds[i]);
+        }
+    }
+}
 
-void socksv5_error(struct selector_key * key) {
+void socksv5_error(const unsigned state, struct selector_key * key){
     printf("Error in socksv5\n");
     ATTACHMENT(key)->closed = true;
 }
