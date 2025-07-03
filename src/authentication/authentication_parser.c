@@ -101,8 +101,10 @@ authentication_parse(AuthParser *p, buffer *b) {
 
             case AUTH_END:
                 printf("AUTH_END: %d\n", c);
+                break;
             case AUTH_ERROR:
                 printf("AUTH_ERROR: %d\n", c);
+                break;
         }
     }
     return p->state;

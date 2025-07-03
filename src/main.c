@@ -26,6 +26,7 @@
 
 #include "socks5.h"
 #include "selector.h"
+#include "logging/logger.h"
 //#include "socks5nio.h"
 
 static bool done = false;
@@ -35,7 +36,25 @@ static void sigterm_handler(const int signal) {
     done = true;
 }
 
+void ejemplo_funcion() {
+    LOG_DEBUG("Entrando en ejemplo_funcion()");
+    
+    int resultado = 42;
+    LOG_DEBUG("Calculando resultado: %d", resultado);
+    
+    if (resultado > 40) {
+        LOG_INFO("El resultado es mayor que 40: %d", resultado);
+    } else {
+        LOG_WARNING("El resultado es menor o igual a 40: %d", resultado);
+    }
+    
+    LOG_DEBUG("Saliendo de ejemplo_funcion()");
+}
+
 int main(const int argc, const char** argv) {
+    logger_init();
+    logger_parse_args(argc, (char**)argv);
+    ejemplo_funcion();
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
     unsigned port = 1080;

@@ -1,86 +1,109 @@
 #include "negotiation_parser.h"
 #include <stdint.h>
-#include <stdio.h>
 #include <stddef.h>
+#include <stdio.h>
 
-void init_negotiation_parser(NegParser * p) {
-    if(p == NULL) {
-        return;
-    }
-    p->state = NEG_VERSION;
-    p->auth_method = NO_METHOD;
+#include "../logging/logger.h"
+
+
+static const uint8_t SOCKS_VERSION = 0x05;
+
+typedef NegState (*parse_character)(NegParser * parser, uint8_t byte);
+
+
+parse_character parse_functions[] = {
+    [NEG_VERSION] = (parse_character) parse_version, // Version is handled directly
+    [NEG_NMETHODS] = (parse_character) parse_method_count, // Number of methods is handled directly
+    [NEG_METHODS] = (parse_character) parse_methods, // Methods are handled directly
+    [NEG_END] = (parse_character) parse_end, // End state does not require parsing
+    [NEG_ERROR] = (parse_character) parse_end // Error state does not require parsing
+};
+
+// -- Public API --------------------------------------------------------------
+void init_negotiation_parser(NegParser * parser) {
+    if(parser == NULL) return;
+    parser->state = NEG_VERSION;
+    parser->auth_method = NO_METHOD;
+    parser->version = 0;
+    parser->nmethods = 0;
 }
 
-NegState negotiation_parse(NegParser * p, buffer * buffer){
-    printf("Started parsing negotiation... \n");
-    if(p == NULL || buffer == NULL) {
+NegState negotiation_parse(NegParser * parser, buffer * buffer){
+    LOG_INFO("negotiation_parse: Client begins negotiations! Welcome! \n");
+    if(parser == NULL || buffer == NULL) {
         return NEG_ERROR;
     }
     while(buffer_can_read(buffer)) {
-        uint8_t c = buffer_read(buffer);
-        switch(p->state) {
-            case NEG_VERSION:
-                if(c == SOCKS_VERSION) {
-                    p->version = c;
-                    p->state = NEG_NMETHODS;
-                } else {
-                    p->state = NEG_ERROR;
-                }
-                printf("VERSION: %d\n", c);
-                break;
-            case NEG_NMETHODS:
-                if(c > 0 && c <= METHOD_SIZE) {
-                    p->nmethods = c;
-                    p->state = NEG_METHODS;
-                } else if (c == 0) {
-                    p->state = NEG_END;
-                } else {
-                    p->state = NEG_ERROR;
-                }
-                printf("NMETHODS: %d\n", c);
-                break;
-            case NEG_METHODS:
-                if (c == USER_PASS) {
-                    p->auth_method = USER_PASS;
-                } else if (c == NO_AUTH) {
-                    if (p->auth_method != USER_PASS)
-                        p->auth_method = NO_AUTH;
-                }
-                if (--p->nmethods == 0)
-                    p->state = NEG_END;
-                break;
-            case NEG_END:
-                return NEG_END;
-            case NEG_ERROR:
-                return NEG_ERROR;
+        parser->state=parse_functions[parser->state](parser,buffer_read(buffer));
+    }
+    return parser->state;
+}
+// -- State handlers ----------------------------------------------------------
+NegState parse_version(NegParser * parser, uint8_t byte){
+    LOG_INFO("parse_version: Client started negotiation for version %d\n",byte);
+    if(byte!=SOCKS_VERSION){
+        LOG_ERROR("parse_version: Client tried negotiating an invalid version.\n");
+        return NEG_ERROR;
+    }
+    return NEG_NMETHODS;
+}
 
-        }
-        if(p->state == NEG_ERROR) {
-            return NEG_ERROR;
-        }
+NegState parse_method_count(NegParser * parser, uint8_t byte){
+    LOG_INFO("parse_method_count: Client started negotiating %d authentication methods\n",byte);
+    parser->nmethods;
+    if(byte==0){
+        return NEG_END;
     }
+    return NEG_METHODS;
 
-    return p->state;
 }
-bool has_negotiation_read_ended(NegParser * p){
-    if(p == NULL) {
-        return false;
+
+NegState parse_methods(NegParser * parser, uint8_t byte){
+    LOG_INFO("parse_method_count: Client started negotiation for %d authentication method\n",byte);
+    if(byte==USER_PASS){
+        parser->auth_method=byte;
     }
-    return p->state == NEG_END;
-}
-bool has_negotiation_errors(NegParser * p){
-    if(p == NULL) {
-        return false;
+    else if(byte==NO_AUTH && parser->auth_method!=USER_PASS){
+        parser->auth_method=byte;
     }
-    return p->state == NEG_ERROR;
+    parser->nmethods-=1;
+    return parser->nmethods == 0 ? NEG_END : NEG_METHODS;
 }
-NegCodes fill_negotiation_answer(NegParser * p, buffer * buffer){
+
+NegState parse_end(NegParser * parser, uint8_t byte){
+    LOG_INFO("parse_method_count: Client started negotiation for %d authentication method\n",byte);
+    if(byte==USER_PASS){
+        parser->auth_method=byte;
+    }
+    else if(byte==NO_AUTH && parser->auth_method!=USER_PASS){
+        parser->auth_method=byte;
+    }
+    parser->nmethods-=1;
+    return parser->nmethods == 0 ? NEG_END : NEG_METHODS;
+}
+
+// -- Boolean Functions ----------------------------------------------------------
+
+bool has_negotiation_read_ended(NegParser * parser){
+    if(parser == NULL) return false;
+
+    return parser->state == NEG_END;
+}
+
+bool has_negotiation_errors(NegParser * parser){
+    if(parser == NULL) return false;
+    return parser->state == NEG_ERROR;
+}
+
+// -- NegCodes Functions ----------------------------------------------------------
+
+NegCodes fill_negotiation_answer(NegParser * parser, buffer * buffer){
     if (!buffer_can_write(buffer))
         return NEG_FULL_BUFFER;
-    printf("Filling negotiation answer... \n");
+    LOG_INFO("Filling negotiation answer... \n");
     buffer_write(buffer, SOCKS_VERSION);
-    buffer_write(buffer, p->auth_method);
-    if (p->auth_method == NO_METHOD)
+    buffer_write(buffer, parser->auth_method);
+    if (parser->auth_method == NO_METHOD)
         return NEG_INVALID_METHOD;
     return NEG_OK;
 }

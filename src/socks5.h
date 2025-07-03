@@ -37,7 +37,7 @@ typedef struct socks5 {
     bool                       closed;
     struct state_machine       stm;
     struct sockaddr_storage    client_addr;
-    struct addrinfo*            origin_resolution;
+    struct addrinfo*           origin_resolution;
     
     socklen_t                  client_addr_len;
     union {
