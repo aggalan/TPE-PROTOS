@@ -1,18 +1,40 @@
 #include "authentication_parser.h"
 #include <string.h>
 #include <stdio.h>
-
+#include "../logging/logger.h"
 #define CRED_FILE  "./src/authentication/users.txt"
 
+#define AUTH_VERSION_USER_PASS 0x01
 
-static bool
-verify_credentials(const char *user, const char *pass) {
+
+typedef AuthState (*parse_character)(AuthParser *p, uint8_t c);
+
+static AuthState parse_version(AuthParser * parser, uint8_t byte);
+static AuthState parse_username_length(AuthParser * parser, uint8_t byte);
+static AuthState parse_username(AuthParser * parser, uint8_t byte);
+static AuthState parse_password_length(AuthParser * parser, uint8_t byte);
+static AuthState parse_password(AuthParser * parser, uint8_t byte);
+static AuthState parse_end(AuthParser * parser, uint8_t byte);
+static AuthState parse_error(AuthParser * parser, uint8_t byte);
+static bool verify_credentials(const char *user, const char *pass);
+
+static parse_character parse_functions[] = {
+    [AUTH_VERSION] = (parse_character) parse_version,
+    [USER_LENGTH]         = (parse_character) parse_username_length,
+    [USERNAME]        = (parse_character) parse_username,
+    [PASS_LENGTH]         = (parse_character) parse_password_length,
+    [PASSWORD]       = (parse_character) parse_password,
+    [AUTH_END]     = (parse_character) parse_end,
+    [AUTH_ERROR]   = (parse_character) parse_error
+};
+
+
+static bool verify_credentials(const char *user, const char *pass) {
     FILE *f = fopen(CRED_FILE, "r");
     if (f == NULL)
         return false;
-
-    char fuser[U_MAX_LEN + 1];
-    char fpass[P_MAX_LEN + 1];
+    char fuser[USER_MAX_LEN + 1];
+    char fpass[PASSWORD_MAX_LEN + 1];
 
     while (fscanf(f, " %15s %15s", fuser, fpass) == 2) {
         printf("DBG: leído user='%s' pass='%s'\n", fuser, fpass);
@@ -25,107 +47,98 @@ verify_credentials(const char *user, const char *pass) {
     return false;
 }
 
-
-void
-init_authentication_parser(AuthParser *p) {
-    if (p == NULL) return;
-    memset(p, 0, sizeof(*p));
-    p->state       = AUTH_VERSION;
-    p->auth_check  = AUTH_FAILURE;
+void init_authentication_parser(AuthParser *parser) {
+    if (parser == NULL) return;
+    memset(parser, 0, sizeof(*parser));
+    parser->state       = AUTH_VERSION;
+    parser->auth_check  = AUTH_FAILURE;
 }
 
-AuthState
-authentication_parse(AuthParser *p, buffer *b) {
-    if (p == NULL || b == NULL) return AUTH_ERROR;
-
-    while (buffer_can_read(b)) {
-        uint8_t c = buffer_read(b);
-
-        switch (p->state) {
-
-            case AUTH_VERSION:
-                printf("AUTH_VERSION: %d\n", c);
-                if (c == VERSION) {
-                    p->version = c;
-                    p->state   = ULEN;
-                } else {
-                    p->state   = AUTH_ERROR;
-                }
-                break;
-
-            case ULEN:
-                printf("ULEN: %d\n", c);
-                if (c == 0 || c > U_MAX_LEN) {
-                    p->state = AUTH_ERROR;
-                    break;
-                }
-                p->ulen  = c;
-                p->idx   = 0;
-                p->state = UNAME;
-                break;
-
-            case UNAME:
-                p->uname[p->idx++] = (char)c;
-                if (p->idx == p->ulen) {
-                    p->uname[p->idx] = '\0';
-                    p->state = PLEN;
-                }
-
-                break;
-
-            case PLEN:
-                printf("name: %s\n", p->uname);
-                printf("PLEN: %d\n", c);
-                if (c == 0 || c > P_MAX_LEN) {
-                    p->state = AUTH_ERROR;
-                    break;
-                }
-                p->plen  = c;
-                p->idx   = 0;
-                p->state = PASSWD;
-                break;
-
-            case PASSWD:
-                p->passwd[p->idx++] = (char)c;
-                if (p->idx == p->plen) {
-                    p->passwd[p->idx] = '\0';
-
-                    printf("passwd: %s\n", p->passwd);
-                    p->auth_check = verify_credentials(p->uname, p->passwd)
-                                    ? AUTH_SUCCESS : AUTH_FAILURE;
-                    printf("AUTH_CHECK: %d\n", p->auth_check);
-                    p->state = AUTH_END;
-                    return p->state;
-                }
-                break;
-
-            case AUTH_END:
-                printf("AUTH_END: %d\n", c);
-                break;
-            case AUTH_ERROR:
-                printf("AUTH_ERROR: %d\n", c);
-                break;
-        }
+AuthState authentication_parse(AuthParser *parser, buffer *buffer) {
+    LOG_INFO("authentication_parse: Client begins authentication! Welcome! \n");
+    if (parser == NULL || buffer == NULL) return AUTH_ERROR;
+    while(buffer_can_read(buffer) && parser->state != AUTH_END) {
+        parser->state=parse_functions[parser->state](parser,buffer_read(buffer));
     }
-    return p->state;
+    return parser->state;
 }
 
-bool
-has_authentication_read_ended(AuthParser *p) {
+AuthState parse_version(AuthParser * parser, uint8_t byte){
+    LOG_INFO("parse_version: Client started negotiation for version %d \n",byte);
+    if(byte != AUTH_VERSION_USER_PASS){
+        LOG_INFO("parse_version: Oof! Ouch! Version %d is invalid :/\n",byte);
+        return AUTH_REPLY_BAD_VERSION;
+    }
+    return USER_LENGTH;
+}
+
+AuthState parse_username_length(AuthParser * parser, uint8_t byte){
+    LOG_INFO("parse_username_length: Client started negotiation for name length %d \n",byte);
+    if(byte==0){
+        return PASS_LENGTH;
+    }
+    parser->ulen=byte;
+    return USERNAME;
+}
+
+AuthState parse_username(AuthParser * parser, uint8_t byte){
+    LOG_INFO("parse_username: Client started negotiation for name character %c \n",byte);
+    parser->uname[parser->idx++] = byte;
+    if(parser->idx == parser->ulen){
+        parser->idx = 0;
+        LOG_INFO("parse_username: Client name was correctly parsed\n");
+        return PASS_LENGTH;
+    }
+    LOG_DEBUG("parse_username: Going at it again!\n");
+    return USERNAME;
+}
+
+AuthState parse_password_length(AuthParser * parser, uint8_t byte){
+    LOG_INFO("parse_password_length: Client started negotiation for password length %d \n",byte);
+    if(byte==0){
+        return AUTH_END;
+    }
+    parser->plen=byte;
+    return PASSWORD;
+
+}
+
+AuthState parse_password(AuthParser * parser, uint8_t byte){
+    LOG_INFO("parse_password: Client started negotiation for password character %c \n",byte);
+    parser->passwd[parser->idx++] = byte;
+    if(parser->idx == parser->plen){
+        parser->idx = 0;
+        LOG_INFO("parse_password: Client password was correctly parsed\n");
+        parser->auth_check = verify_credentials(parser->uname, parser->passwd) ? AUTH_SUCCESS : AUTH_FAILURE;
+        LOG_INFO("parse_password: Checking Authentification %d\n", parser->auth_check);
+        return AUTH_END;
+    }
+    return PASSWORD;
+}
+
+AuthState parse_end(AuthParser * parser, uint8_t byte){
+    LOG_INFO("parse_end: Authentification has ended. \n");
+    return parser != NULL && parser->state == AUTH_END;
+}
+
+AuthState parse_error(AuthParser * parser, uint8_t byte){
+    LOG_INFO("parse_error: Error in Authentification. \n");
+
+}
+
+bool has_authentication_read_ended(AuthParser *p) {
     return p != NULL && p->state == AUTH_END;
 }
 
-bool
-has_authentication_errors(AuthParser *p) {
+bool has_authentication_errors(AuthParser *p) {
     return p != NULL && p->state == AUTH_ERROR;
 }
 
-AuthCodes
-fill_authentication_answer(AuthParser *p, buffer *b) {
+AuthCodes fill_authentication_answer(AuthParser *p, buffer *b) {
     if (!buffer_can_write(b))
         return AUTH_REPLY_FULL_BUFFER;
-    printf("Filling Auth answer... \n");
-    buffer_write(b, VERSION);
-    buffer_write(b, (p->auth_check == AUTH_SUCCESS) ? 0x00 : 0x01);
+    LOG_INFO("parse_password: Server is filling the answer \n");
+    buffer_write(b, AUTH_VERSION_USER_PASS);
+    buffer_write(b, (p->auth_check == AUTH_SUCCESS) ? 0x00 : 0x01); // OJO CON LOS MAGIC NUMBERS
     return p->auth_check == AUTH_SUCCESS? AUTH_REPLY_OK : AUTH_REPLY_DENIED;
 }
