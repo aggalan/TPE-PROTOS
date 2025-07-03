@@ -50,7 +50,7 @@ NegState parse_version(NegParser * parser, uint8_t byte){
 
 NegState parse_method_count(NegParser * parser, uint8_t byte){
     LOG_INFO("parse_method_count: Client started negotiating %d authentication methods\n",byte);
-    parser->nmethods;
+    parser->nmethods=byte;
     if(byte==0){
         return NEG_END;
     }
@@ -73,12 +73,15 @@ NegState parse_methods(NegParser * parser, uint8_t byte){
 NegState parse_end(NegParser * parser, uint8_t byte){
     LOG_INFO("parse_method_count: Client started negotiation for %d authentication method\n",byte);
     if(byte==USER_PASS){
+        LOG_INFO("parse_method_count: Server accepts %d : USER_PASS authentication method\n",byte);
         parser->auth_method=byte;
     }
     else if(byte==NO_AUTH && parser->auth_method!=USER_PASS){
+        LOG_INFO("parse_method_count: Server accepts %d authentication method\n",byte);
         parser->auth_method=byte;
     }
     parser->nmethods-=1;
+    LOG_INFO("parse_method_count: Server has %d authentication methods to go\n",parser->nmethods);
     return parser->nmethods == 0 ? NEG_END : NEG_METHODS;
 }
 
