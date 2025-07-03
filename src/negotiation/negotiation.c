@@ -6,7 +6,7 @@
 
 
 void negotiation_init(const unsigned state,struct selector_key *key) {
-    printf("Creating negotiation...\n");
+    printf("Creating negotiation... [state:%d]\n",state);
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;

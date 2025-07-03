@@ -7,7 +7,7 @@
 
 
 void authentication_init(const unsigned state, struct selector_key *key) {
-    printf("Creating authentication...\n");
+    printf("Creating authentication... [state:%d]\n",state);
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
