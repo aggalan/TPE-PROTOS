@@ -36,18 +36,18 @@ unsigned request_setup(struct selector_key *key) {
     socklen_t dest_len = 0; //TODO: check
     int setup_ok = 0; //TODO: check
 
-    //struct sockaddr_storage dest_addr;
-    // memset(&dest_addr, 0, sizeof(dest_addr));
-    // //TODO: MALLOC?
+    struct sockaddr_storage dest_addr;
+     memset(&dest_addr, 0, sizeof(dest_addr));
+     //TODO: MALLOC?
 
     if(atyp == IPV4) {
         printf("DEBUG: IPV4\n");
-        struct sockaddr_in* addr4 = malloc(sizeof(struct sockaddr_in));
-        if(addr4 == NULL) {
-            printf("Failed to allocate memory for IPV4 address\n");
-            return REQUEST_WRITE;
-        }
-        // struct sockaddr_in *addr4 = (struct sockaddr_in *)&dest_addr;
+        // struct sockaddr_in* addr4 = malloc(sizeof(struct sockaddr_in));
+        // if(addr4 == NULL) {
+        //     printf("Failed to allocate memory for IPV4 address\n");
+        //     return REQUEST_WRITE;
+        // }
+        struct sockaddr_in *addr4 = (struct sockaddr_in *)&dest_addr;
         *addr4 = (struct sockaddr_in){
             .sin_family = AF_INET,
             .sin_addr = parser->dst_addr.ipv4,
@@ -62,8 +62,8 @@ unsigned request_setup(struct selector_key *key) {
         }
         *data->origin_resolution = (struct addrinfo){
             .ai_family = AF_INET,
-            // .ai_socktype = SOCK_STREAM,
-            // .ai_protocol = IPPROTO_TCP,
+            .ai_socktype = SOCK_STREAM,
+            .ai_protocol = IPPROTO_TCP,
             .ai_addrlen = sizeof(*addr4),
             .ai_addr = (struct sockaddr *)addr4,
         };
@@ -76,31 +76,31 @@ unsigned request_setup(struct selector_key *key) {
     } 
     else if(atyp == IPV6) {
         printf("DEBUG: IPV6\n");
-        // struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&dest_addr;
-        // *addr6 = (struct sockaddr_in6){
-        //     .sin6_family = AF_INET6,
-        //     .sin6_addr = parser->dst_addr.ipv6,
-        //     .sin6_port = htons(parser->dst_port)
-        // };
-        // dest_len = sizeof(struct sockaddr_in6);
-        // data->origin_resolution = malloc(sizeof(struct addrinfo));
-        // if(data->origin_resolution == NULL){
-        //     printf("Failed to allocate memory for origin resolution\n");
-        //     free(addr6);
-        //     return REQUEST_WRITE;
-        // }
-        // *data->origin_resolution = (struct addrinfo){
-        //     .ai_family = AF_INET6,
-        //     // .ai_socktype = SOCK_STREAM,
-        //     // .ai_protocol = IPPROTO_TCP,
-        //     .ai_addrlen = sizeof(struct sockaddr_in6),
-        //     .ai_addr = (struct sockaddr *)addr6,
-        // };
-        // setup_ok = 1;
-        // char ipstr[INET6_ADDRSTRLEN];
-        // inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
-        // printf("[DEBUG] IPV6 setup ok: [%s]:%d\n", ipstr, ntohs(addr6->sin6_port));
-        // request_create_connection(key);
+        struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&dest_addr;
+        *addr6 = (struct sockaddr_in6){
+            .sin6_family = AF_INET6,
+            .sin6_addr = parser->dst_addr.ipv6,
+            .sin6_port = htons(parser->dst_port)
+        };
+        dest_len = sizeof(struct sockaddr_in6);
+        data->origin_resolution = malloc(sizeof(struct addrinfo));
+        if(data->origin_resolution == NULL){
+            printf("Failed to allocate memory for origin resolution\n");
+            free(addr6);
+            return REQUEST_WRITE;
+        }
+        *data->origin_resolution = (struct addrinfo){
+            .ai_family = AF_INET6,
+            // .ai_socktype = SOCK_STREAM,
+            // .ai_protocol = IPPROTO_TCP,
+            .ai_addrlen = sizeof(struct sockaddr_in6),
+            .ai_addr = (struct sockaddr *)addr6,
+        };
+        setup_ok = 1;
+        char ipstr[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
+        printf("[DEBUG] IPV6 setup ok: [%s]:%d\n", ipstr, ntohs(addr6->sin6_port));
+        request_create_connection(key);
 
     } 
     else if(atyp == DOMAINNAME) {
