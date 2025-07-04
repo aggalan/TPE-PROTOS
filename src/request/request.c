@@ -293,7 +293,7 @@ unsigned request_write(struct selector_key *key) {
     }
 
     printf("Request ended: OK\n");
-    return DONE;
+    return RELAY;
 }
 
 

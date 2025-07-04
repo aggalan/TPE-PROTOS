@@ -20,6 +20,7 @@
 #include "./authentication/authentication.h"
 #include "./request/request.h"
 
+
 #define BUFFER_SIZE 4096
 #define FD_UPPER_LIMIT 1024
 #define ERROR_CODE -1
@@ -81,6 +82,13 @@ static const struct state_definition client_actions[] = {
     .on_arrival = request_connecting_init,
     .on_write_ready = request_connecting,
 },
+    {
+    .state = RELAY,
+        .on_arrival = relay_init,
+        .on_read_ready = relay_read,
+        .on_write_ready = relay_write,
+        //.on_departure = relay_close,
+    },
     /* === Terminal states === */
     {
         .state        = DONE,
@@ -103,10 +111,8 @@ SocksClient *socks5_new(const int client_fd, const struct sockaddr_storage *clie
     ret->client_addr = *client_addr;
     ret->client_addr_len = client_addr_len;
     ret->closed = false;
-
-    static uint8_t r_buffer[BUFFER_SIZE], w_buffer[BUFFER_SIZE];
-    buffer_init(&ret->read_buffer, BUFFER_SIZE, r_buffer);
-    buffer_init(&ret->write_buffer, BUFFER_SIZE, w_buffer);
+    buffer_init(&ret->read_buffer, BUFFER_SIZE, ret->read_buffer_space);
+    buffer_init(&ret->write_buffer, BUFFER_SIZE, ret->write_buffer_space);
     //State Machine Set up
     ret->stm.initial = NEGOTIATION_READ;
     ret->stm.states = client_actions;

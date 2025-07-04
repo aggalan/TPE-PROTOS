@@ -3,6 +3,7 @@
 
 #include "selector.h"
 #include "buffer.h"
+#include "relay/relay.h"
 #include "./negotiation/negotiation.h"
 #include "./authentication/authentication.h"
 #include "./request/request.h"
@@ -21,7 +22,7 @@ enum socks_v5state {
     REQUEST_READ,
     REQUEST_WRITE,
     REQUEST_CONNECTING,
-    //RELAY,
+    RELAY,
     DONE,
     ERROR,
     ORIGIN_CONNECT,
@@ -29,23 +30,28 @@ enum socks_v5state {
 };
 
 #define ATTACHMENT(key) ((struct socks5 *)(key)->data)
-
+#define BUFFER_SIZE 4096
 typedef struct socks5 {
     int                        client_fd;
     int                        origin_fd;
     buffer                     read_buffer;
     buffer                     write_buffer;
+    uint8_t read_buffer_space[BUFFER_SIZE];
+    uint8_t write_buffer_space[BUFFER_SIZE];
     bool                       closed;
     struct state_machine       stm;
     struct sockaddr_storage    client_addr;
     struct addrinfo*           origin_resolution;
-    
     socklen_t                  client_addr_len;
     union {
+        struct relay *relay;
         NegParser negotiation_parser;
         AuthParser authentication_parser;
         ReqParser request_parser;
     } client;
+    union {
+        struct relay *relay;
+    }origin;
 
 }SocksClient;
 
