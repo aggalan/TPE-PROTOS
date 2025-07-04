@@ -11,16 +11,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-struct relay {
-    int *fd;
-
-    buffer *rb, *wb;
-
-    fd_interest duplex;
-
-    struct relay *other;
-};
-
 void relay_init(const unsigned state, struct selector_key *key);
 unsigned relay_read(struct selector_key *key);
 unsigned relay_write(struct selector_key *key);

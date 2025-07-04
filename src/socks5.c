@@ -113,6 +113,7 @@ SocksClient *socks5_new(const int client_fd, const struct sockaddr_storage *clie
     ret->closed = false;
     buffer_init(&ret->read_buffer, BUFFER_SIZE, ret->read_buffer_space);
     buffer_init(&ret->write_buffer, BUFFER_SIZE, ret->write_buffer_space);
+
     //State Machine Set up
     ret->stm.initial = NEGOTIATION_READ;
     ret->stm.states = client_actions;

@@ -29,6 +29,17 @@ enum socks_v5state {
     ORIGIN_CONNECT_WRITE,
 };
 
+struct relay {
+    int *fd;
+
+    buffer *rb, *wb;
+
+    fd_interest duplex;
+
+    struct relay *other;
+};
+
+
 #define ATTACHMENT(key) ((struct socks5 *)(key)->data)
 #define BUFFER_SIZE 4096
 typedef struct socks5 {
@@ -44,13 +55,13 @@ typedef struct socks5 {
     struct addrinfo*           origin_resolution;
     socklen_t                  client_addr_len;
     union {
-        struct relay *relay;
+        struct relay relay;
         NegParser negotiation_parser;
         AuthParser authentication_parser;
         ReqParser request_parser;
     } client;
     union {
-        struct relay *relay;
+        struct relay relay;
     }origin;
 
 }SocksClient;

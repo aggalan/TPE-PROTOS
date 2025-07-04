@@ -78,7 +78,7 @@ unsigned negotiation_write(struct selector_key *key) {
     printf("User has selected NO authentication\n");
 
     //return REQUEST_READ
-    return DONE;
+    return REQUEST_READ;
 }
 
 

@@ -2,18 +2,19 @@
 
 void relay_init(const unsigned state, struct selector_key *key) {
     printf("Creating relay...\n");
-    struct relay * data = ATTACHMENT(key)->client.relay;
+    struct relay * data = &ATTACHMENT(key)->client.relay;
     data->fd = &ATTACHMENT(key)->client_fd;
     data->rb = &ATTACHMENT(key)->read_buffer;
     data->wb = &ATTACHMENT(key)->write_buffer;
     data->duplex = OP_READ | OP_WRITE;
-    data->other = ATTACHMENT(key)->origin.relay;
-    data = ATTACHMENT(key)->origin.relay;
+    data->other = &ATTACHMENT(key)->origin.relay;
+    data = &ATTACHMENT(key)->origin.relay;
     data->fd = &ATTACHMENT(key)->origin_fd;
     data->rb = &ATTACHMENT(key)->write_buffer;
     data->wb = &ATTACHMENT(key)->read_buffer;
     data->duplex = OP_READ | OP_WRITE;
-    data->other = ATTACHMENT(key)->client.relay;
+    data->other = &ATTACHMENT(key)->client.relay;
+    printf("All relay elements created!\n");
 }
 
 static fd_interest copy_compute_interests(fd_selector s, struct relay *d) {
@@ -35,7 +36,8 @@ static fd_interest copy_compute_interests(fd_selector s, struct relay *d) {
 }
 
 unsigned relay_read(struct selector_key *key) {
-    struct relay *data = ATTACHMENT(key)->client.relay;
+    printf("relay_read\n");
+    struct relay *data = &ATTACHMENT(key)->client.relay;
     data = *data->fd == key->fd ? data : data->other;
     size_t size;
     ssize_t n;
@@ -65,7 +67,8 @@ unsigned relay_read(struct selector_key *key) {
 }
 
 unsigned relay_write(struct selector_key *key) {
-    struct relay *data = ATTACHMENT(key)->client.relay;
+    printf("relay_write\n");
+    struct relay *data = &ATTACHMENT(key)->client.relay;
     data = *data->fd == key->fd ? data : data->other;
     size_t size;
     ssize_t n;
