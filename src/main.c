@@ -79,7 +79,7 @@ int main(const int argc, const char** argv) {
         goto finally;
     }
 
-    fprintf(stdout, "Listening on TCP port %d\n", port);
+    LOG_INFO("Listening on TCP port %d\n",port);
 
     // man 7 ip. no importa reportar nada si falla.
     setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));

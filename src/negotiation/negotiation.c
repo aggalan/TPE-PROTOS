@@ -6,18 +6,18 @@
 
 
 void negotiation_init(const unsigned state,struct selector_key *key) {
-    printf("Creating negotiation... [state:%d]\n",state);
+    LOG_INFO("Creating negotiation...\n");
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
     }
     init_negotiation_parser(&socks->client.negotiation_parser);
-    printf("All negotiation elements created!\n");
+    LOG_INFO("All negotiation elements created!\n");
 
 }
 
 unsigned negotiation_read(struct selector_key *key) {
-    printf("Started reading negotiation\n");
+    LOG_INFO("Started reading negotiation...\n");
     SocksClient * data = ATTACHMENT(key);
 
     size_t read_size;
@@ -36,14 +36,14 @@ unsigned negotiation_read(struct selector_key *key) {
             printf("No methods allowed or selector error\n");
             return ERROR;
         }
-        printf("Parsed negotiation successfully\n");
+        LOG_INFO("Negotiation parsed successfully\n");
         return NEGOTIATION_WRITE;
     }
     return NEGOTIATION_READ;
 }
 
 unsigned negotiation_write(struct selector_key *key) {
-    printf("Started negotiation response\n");
+    LOG_INFO("Starting negotiation response...\n");
     SocksClient* data = ATTACHMENT(key);
 
     size_t write_size;
@@ -56,7 +56,7 @@ unsigned negotiation_write(struct selector_key *key) {
         return ERROR;
     }
 
-    printf("Response sent!\n");
+    LOG_INFO("Negotiation response sent!\n");
 
     buffer_read_adv(&data->write_buffer, write_count);
 
@@ -68,14 +68,14 @@ unsigned negotiation_write(struct selector_key *key) {
         return ERROR;
     }
 
-    printf("Negotiation ended: OK\n");
+    LOG_INFO("Negotiation ended\n");
 
     if (USER_PASS == data->client.negotiation_parser.auth_method) {
-        printf("User has selected authentication\n");
+        LOG_INFO("User has selected USER_PASS authentication\n");
         return AUTHENTICATION_READ;
     }
 
-    printf("User has selected NO authentication\n");
+    LOG_INFO("User has selected NO_AUTH authentication\n");
 
     //return REQUEST_READ
     return REQUEST_READ;

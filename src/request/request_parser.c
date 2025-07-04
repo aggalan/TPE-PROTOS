@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <arpa/inet.h>
+#include "../logging/logger.h"
 
 void init_request_parser(ReqParser *p) {
     if (p == NULL) return;
@@ -12,6 +13,7 @@ void init_request_parser(ReqParser *p) {
 }
 
 ReqState request_parse(ReqParser* p, buffer* b) {
+    LOG_INFO("Starting request parse...\n");
     if (p == NULL || b == NULL) return REQ_ERROR;
     while (buffer_can_read(b)) {
         uint8_t c = buffer_read(b);
@@ -135,7 +137,8 @@ ReqCodes fill_request_answer(ReqParser *p, buffer *buffer) {
     };
 
 
-    printf("Filling request answer... \n");
+    LOG_INFO("Filling request answer...\n");
+
 
     for (int i = 0; i < 10; i++) {
         if (!buffer_can_write(buffer)) {

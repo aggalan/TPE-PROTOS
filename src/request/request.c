@@ -19,18 +19,18 @@ unsigned request_create_connection(struct selector_key *key);
 unsigned request_error(SocksClient *data, struct selector_key *key, unsigned status);
 
 void request_init(const unsigned state,struct selector_key * key) {
-    printf("Creating request...\n");
+    LOG_INFO("Creating request...\n");
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
     }
     init_request_parser(&socks->client.request_parser);
-    printf("All request elements created!\n");
+    LOG_INFO("All request elements created!\n");
 }
 
 unsigned request_setup(struct selector_key *key) {
     SocksClient *data = ATTACHMENT(key);
-    printf("DEBUG: Setting up request...\n");
+    LOG_INFO("Setting up request...\n");
     ReqParser *parser = &data->client.request_parser;
     uint8_t atyp = parser->atyp;
     socklen_t dest_len = 0; //TODO: check
@@ -41,7 +41,7 @@ unsigned request_setup(struct selector_key *key) {
      //TODO: MALLOC?
 
     if(atyp == IPV4) {
-        printf("DEBUG: IPV4\n");
+        LOG_INFO("IPV4 setup\n");
         // struct sockaddr_in* addr4 = malloc(sizeof(struct sockaddr_in));
         // if(addr4 == NULL) {
         //     printf("Failed to allocate memory for IPV4 address\n");
@@ -70,7 +70,7 @@ unsigned request_setup(struct selector_key *key) {
         setup_ok = 1;
         char ipstr[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &addr4->sin_addr, ipstr, sizeof(ipstr));
-        printf("[DEBUG] IPV4 setup ok: %s:%d\n", ipstr, ntohs(addr4->sin_port));
+        LOG_INFO("Finished IPV4 setup\n");
         return request_create_connection(key);
 
     } 
@@ -171,16 +171,14 @@ unsigned request_connecting(struct selector_key *key) {
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
 
-    printf("CONNECTED!");
+    LOG_INFO("The connection was established!\n");
     return REQUEST_WRITE;
 }
 
 unsigned request_create_connection(struct selector_key *key) {
-    printf("DEBUG: Creating socket...\n");
     SocksClient * data = ATTACHMENT(key);
-    printf("Creating socket...\n");
+    LOG_INFO("Creating socket\n");
     data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | O_NONBLOCK, data->origin_resolution->ai_protocol);
-    printf("Socket Correctly!\n");
     if(data->origin_fd < 0){
         data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM, data->origin_resolution->ai_protocol);
         if(data->origin_fd < 0){
@@ -190,6 +188,8 @@ unsigned request_create_connection(struct selector_key *key) {
     }
 
     selector_fd_set_nio(data->origin_fd);
+
+    LOG_INFO("Socket created!\n");
 
     if(connect(data->origin_fd, data->origin_resolution->ai_addr, data->origin_resolution->ai_addrlen) == 0 || errno == EINPROGRESS){
         if (selector_register(key->s, data->origin_fd, get_fd_handler() , OP_WRITE, data) != SELECTOR_SUCCESS) {
@@ -230,7 +230,7 @@ unsigned request_error(SocksClient *data, struct selector_key *key, unsigned sta
 }
 
 unsigned request_read(struct selector_key *key) {
-    printf("Started reading request\n");
+    LOG_INFO("Starting request read...\n");
     SocksClient * data = ATTACHMENT(key);
 
     size_t read_size;
@@ -245,8 +245,8 @@ unsigned request_read(struct selector_key *key) {
     buffer_write_adv(&data->read_buffer, read_count);
     request_parse(&data->client.request_parser, &data->read_buffer);
     if (has_request_read_ended(&data->client.request_parser)) {
-        printf("Parsed request successfully\n");
-        printf("%s\n", request_to_string(&data->client.request_parser));
+        LOG_INFO("Parsed request successfully\n");
+        LOG_INFO("%s\n", request_to_string(&data->client.request_parser));
         if(!has_request_errors(&data->client.request_parser)) {
             return request_setup(key);
         }
@@ -260,27 +260,17 @@ unsigned request_read(struct selector_key *key) {
 }
 
 unsigned request_write(struct selector_key *key) {
-    printf("Started request response\n");
+    LOG_INFO("Starting request response...\n");
     SocksClient* data = ATTACHMENT(key);
 
     size_t write_size;
-
-    printf("FD to send to: %d, origin_fd: %d\n", data->client_fd, data->origin_fd);
-
     uint8_t * write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
-    printf("Buffer to send (%zu bytes):", write_size);
-    for (size_t i = 0; i < write_size; i++) {
-        printf(" %02x", write_buffer[i]);
-    }
-    printf("\n");
     ssize_t write_count = send(data->client_fd, write_buffer, write_size, MSG_NOSIGNAL);
-    printf("Sent %zu bytes\n", write_count);
     if (write_count < 0) {
         printf("request response send error\n");
         return ERROR;
     }
-
-    printf("Response sent!\n");
+    LOG_INFO("Request response sent!\n");
 
     buffer_read_adv(&data->write_buffer, write_count);
 
@@ -292,7 +282,7 @@ unsigned request_write(struct selector_key *key) {
         return ERROR;
     }
 
-    printf("Request ended: OK\n");
+    LOG_INFO("Request ended\n");
     return RELAY;
 }
 

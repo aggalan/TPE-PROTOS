@@ -37,7 +37,7 @@ static bool verify_credentials(const char *user, const char *pass) {
     char fpass[PASSWORD_MAX_LEN + 1];
 
     while (fscanf(f, " %15s %15s", fuser, fpass) == 2) {
-        printf("DBG: leído user='%s' pass='%s'\n", fuser, fpass);
+    LOG_INFO("USERNAME: %s PASSWORD: %s\n",fuser, fpass);
         if (strcmp(user, fuser) == 0 && strcmp(pass, fpass) == 0) {
             fclose(f);
             return true;
@@ -55,7 +55,7 @@ void init_authentication_parser(AuthParser *parser) {
 }
 
 AuthState authentication_parse(AuthParser *parser, buffer *buffer) {
-    LOG_INFO("authentication_parse: Client begins authentication! Welcome! \n");
+    LOG_INFO("Starting authentication parse\n");
     if (parser == NULL || buffer == NULL) return AUTH_ERROR;
     while(buffer_can_read(buffer) && parser->state != AUTH_END) {
         parser->state=parse_functions[parser->state](parser,buffer_read(buffer));
@@ -64,7 +64,7 @@ AuthState authentication_parse(AuthParser *parser, buffer *buffer) {
 }
 
 AuthState parse_version(AuthParser * parser, uint8_t byte){
-    LOG_INFO("parse_version: Client started negotiation for version %d \n",byte);
+    LOG_INFO("Version parsed: %d\n",byte);
     if(byte != AUTH_VERSION_USER_PASS){
         LOG_INFO("parse_version: Oof! Ouch! Version %d is invalid :/\n",byte);
         return AUTH_ERROR;
@@ -73,7 +73,7 @@ AuthState parse_version(AuthParser * parser, uint8_t byte){
 }
 
 AuthState parse_username_length(AuthParser * parser, uint8_t byte){
-    LOG_INFO("parse_username_length: Client started negotiation for name length %d \n",byte);
+    LOG_INFO("Parsed username length: %d \n",byte);
     if(byte==0){
         return PASS_LENGTH;
     }
@@ -82,19 +82,17 @@ AuthState parse_username_length(AuthParser * parser, uint8_t byte){
 }
 
 AuthState parse_username(AuthParser * parser, uint8_t byte){
-    LOG_INFO("parse_username: Client started negotiation for name character %c \n",byte);
     parser->uname[parser->idx++] = byte;
     if(parser->idx == parser->ulen){
         parser->idx = 0;
-        LOG_INFO("parse_username: Client name was correctly parsed\n");
+        LOG_INFO("Username parsed successfully\n");
         return PASS_LENGTH;
     }
-    LOG_DEBUG("parse_username: Going at it again!\n");
     return USERNAME;
 }
 
 AuthState parse_password_length(AuthParser * parser, uint8_t byte){
-    LOG_INFO("parse_password_length: Client started negotiation for password length %d \n",byte);
+    LOG_INFO("Parsed password length: %d \n",byte);
     if(byte==0){
         return AUTH_END;
     }
@@ -104,13 +102,12 @@ AuthState parse_password_length(AuthParser * parser, uint8_t byte){
 }
 
 AuthState parse_password(AuthParser * parser, uint8_t byte){
-    LOG_INFO("parse_password: Client started negotiation for password character %c \n",byte);
     parser->passwd[parser->idx++] = byte;
     if(parser->idx == parser->plen){
         parser->idx = 0;
-        LOG_INFO("parse_password: Client password was correctly parsed\n");
+        LOG_INFO("Password parsed successfully\n");
         parser->auth_check = verify_credentials(parser->uname, parser->passwd) ? AUTH_SUCCESS : AUTH_FAILURE;
-        LOG_INFO("parse_password: Checking Authentification %d\n", parser->auth_check);
+        LOG_INFO("Checking Authentification: %d\n", parser->auth_check);
         return AUTH_END;
     }
     return PASSWORD;
@@ -138,7 +135,7 @@ bool has_authentication_errors(AuthParser *p) {
 AuthCodes fill_authentication_answer(AuthParser *p, buffer *b) {
     if (!buffer_can_write(b))
         return AUTH_REPLY_FULL_BUFFER;
-    LOG_INFO("parse_password: Server is filling the answer \n");
+    LOG_INFO("Filling authentication answer\n");
     buffer_write(b, AUTH_VERSION_USER_PASS);
     buffer_write(b, (p->auth_check == AUTH_SUCCESS) ? 0x00 : 0x01); // OJO CON LOS MAGIC NUMBERS
     return p->auth_check == AUTH_SUCCESS? AUTH_REPLY_OK : AUTH_REPLY_DENIED;

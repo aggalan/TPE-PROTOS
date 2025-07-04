@@ -1,7 +1,7 @@
 #include "relay/relay.h"
 
 void relay_init(const unsigned state, struct selector_key *key) {
-    printf("Creating relay...\n");
+    LOG_INFO("Creating relay...\n");
     struct relay * data = &ATTACHMENT(key)->client.relay;
     data->fd = &ATTACHMENT(key)->client_fd;
     data->rb = &ATTACHMENT(key)->read_buffer;
@@ -14,7 +14,7 @@ void relay_init(const unsigned state, struct selector_key *key) {
     data->wb = &ATTACHMENT(key)->read_buffer;
     data->duplex = OP_READ | OP_WRITE;
     data->other = &ATTACHMENT(key)->client.relay;
-    printf("All relay elements created!\n");
+    LOG_INFO("All relay elements created!\n");
 }
 
 static fd_interest copy_compute_interests(fd_selector s, struct relay *d) {

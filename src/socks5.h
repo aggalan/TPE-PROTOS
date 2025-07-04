@@ -9,6 +9,7 @@
 #include "./request/request.h"
 #include "stm.h"
 #include "authentication/authentication_parser.h"
+#include "logging/logger.h"
 #include "request/request_parser.h"
 #include <netdb.h>
 #include <stdbool.h>
