@@ -254,6 +254,7 @@ void _closeConnection(struct selector_key *key)
 void socksv5_done(const unsigned state, struct selector_key * key)
 {
     LOG_INFO("Socks DONE...\n");
+    log_metrics();
     metrics_connection_closed();
     const int fds[] = {
         ATTACHMENT(key)->client_fd,

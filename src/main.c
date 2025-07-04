@@ -160,7 +160,6 @@ finally:
         selector_destroy(selector);
     }
     selector_close();
-
     // socksv5_pool_destroy();
 
     if (server >= 0) {
