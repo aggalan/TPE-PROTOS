@@ -17,6 +17,7 @@ void relay_init(const unsigned state, struct selector_key *key) {
     data->other = &ATTACHMENT(key)->client.relay;
     selector_set_interest(key->s, ATTACHMENT(key)->origin_fd, OP_READ);
     LOG_INFO("All relay elements created!\n");
+    LOG_INFO("Relaying...\n");
 }
 
 static fd_interest copy_compute_interests(fd_selector s, struct relay *d) {
@@ -38,7 +39,6 @@ static fd_interest copy_compute_interests(fd_selector s, struct relay *d) {
 }
 
 unsigned relay_read(struct selector_key *key) {
-    LOG_INFO("Reading...\n");
     struct relay *data = &ATTACHMENT(key)->client.relay;
     data = *data->fd == key->fd ? data : data->other;
     size_t size;
@@ -69,7 +69,6 @@ unsigned relay_read(struct selector_key *key) {
 }
 
 unsigned relay_write(struct selector_key *key) {
-    LOG_INFO("Writing...\n");
     struct relay *data = &ATTACHMENT(key)->client.relay;
     data = *data->fd == key->fd ? data : data->other;
     size_t size;
