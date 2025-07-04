@@ -128,12 +128,12 @@ ReqCodes fill_request_answer(ReqParser *p, buffer *buffer) {
         return REQ_FULLBUFFER;
 
     uint8_t answer[10] = {
-        0x05, // Version
-        p->status, // REP:
-        0x00, // RSV
-        p->atyp, // ATYP: IPv4
-        127, 0, 0, 1, // BND.ADDR
-        0x30, 0x39   // BND.PORT = 12345
+        0x05,
+        p->status,
+        0x00,
+        p->atyp,
+        127, 0, 0, 1,
+        0x30, 0x39
     };
 
 

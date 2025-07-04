@@ -16,6 +16,7 @@
 #include "buffer.h"
 #include "stm.h"
 #include "parser.h"
+#include "metrics.h"
 #include "./negotiation/negotiation.h"
 #include "./authentication/authentication.h"
 #include "./request/request.h"
@@ -160,6 +161,7 @@ void socksv5_passive_accept(struct selector_key *key){
     {
         goto fail;
     }
+    metrics_connection_opened();
 
     if (SELECTOR_SUCCESS != selector_register(key->s, client, &socks5_handler,OP_READ, state))
     {
@@ -216,7 +218,7 @@ void _closeConnection(struct selector_key *key)
     if (data->closed) return;
 
     data->closed = true;
-    //@TODO: add to metrics
+    metrics_connection_closed();
     printf("Socks client %d disconected",key->fd);
 
     int clientSocket = data->client_fd;
@@ -252,6 +254,7 @@ void _closeConnection(struct selector_key *key)
 void socksv5_done(const unsigned state, struct selector_key * key)
 {
     LOG_INFO("Socks DONE...\n");
+    metrics_connection_closed();
     const int fds[] = {
         ATTACHMENT(key)->client_fd,
         ATTACHMENT(key)->origin_fd,
@@ -271,5 +274,6 @@ void socksv5_done(const unsigned state, struct selector_key * key)
 
 void socksv5_error(const unsigned state, struct selector_key * key){
     LOG_ERROR("Socks error\n");
+    metrics_connection_closed();
     ATTACHMENT(key)->closed = true;
 }

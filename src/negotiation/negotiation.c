@@ -1,5 +1,6 @@
 #include "negotiation.h"
 #include "../socks5.h"
+#include "metrics.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -28,6 +29,7 @@ unsigned negotiation_read(struct selector_key *key) {
         printf("Greeting_read read error\n");
         return ERROR;
     }
+    metrics_add_bytes(read_count);
 
     buffer_write_adv(&data->read_buffer, read_count);
     negotiation_parse(&data->client.negotiation_parser, &data->read_buffer);
@@ -50,11 +52,13 @@ unsigned negotiation_write(struct selector_key *key) {
 
     uint8_t * write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
     ssize_t write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL); //NOWAIT?
-
+    
     if (write_count < 0) {
         printf("Greeting_write send error\n");
         return ERROR;
     }
+
+    metrics_add_bytes(write_count);
 
     LOG_INFO("Negotiation response sent!\n");
 

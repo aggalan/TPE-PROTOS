@@ -1,4 +1,5 @@
 #include "relay/relay.h"
+#include "metrics.h"
 
 void relay_init(const unsigned state, struct selector_key *key) {
     LOG_INFO("Creating relay...\n");
@@ -57,6 +58,7 @@ unsigned relay_read(struct selector_key *key) {
         }
     } else {
         buffer_write_adv(b, n);
+        metrics_add_bytes(n);
     }
 
     copy_compute_interests(key->s, data);
@@ -87,6 +89,7 @@ unsigned relay_write(struct selector_key *key) {
         }
     } else {
         buffer_read_adv(b, n);
+        metrics_add_bytes(n);
     }
 
     copy_compute_interests(key->s, data);
