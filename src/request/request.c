@@ -202,7 +202,7 @@ unsigned request_create_connection(struct selector_key *key) {
             return ERROR;
         }
 
-        LOG_INFO("Attemping connection with Client Number %d\n",data->origin_fd);
+        LOG_INFO("Attemping connection with Client Number %d\n",data->client_fd);
         return REQUEST_CONNECTING;
     }
 

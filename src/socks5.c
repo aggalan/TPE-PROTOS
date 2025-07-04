@@ -251,7 +251,7 @@ void _closeConnection(struct selector_key *key)
 
 void socksv5_done(const unsigned state, struct selector_key * key)
 {
-    printf("Socks5 done\n");
+    LOG_INFO("Socks DONE...\n");
     const int fds[] = {
         ATTACHMENT(key)->client_fd,
         ATTACHMENT(key)->origin_fd,
@@ -270,6 +270,6 @@ void socksv5_done(const unsigned state, struct selector_key * key)
 }
 
 void socksv5_error(const unsigned state, struct selector_key * key){
-    printf("Error in socksv5\n");
+    LOG_ERROR("Socks error\n");
     ATTACHMENT(key)->closed = true;
 }
