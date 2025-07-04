@@ -130,8 +130,8 @@ ReqCodes fill_request_answer(ReqParser *p, buffer *buffer) {
         p->status, // REP:
         0x00, // RSV
         p->atyp, // ATYP: IPv4
-        0x00, 0x00, 0x00, 0x00, // BND.ADDR (set to 0.0.0.0 for now)
-        0x00, 0x00 // BND.PORT (set to 0 for now)
+        127, 0, 0, 1, // BND.ADDR
+        0x30, 0x39   // BND.PORT = 12345
     };
 
 

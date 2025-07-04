@@ -154,6 +154,8 @@ void socksv5_passive_accept(struct selector_key *key){
         goto fail;
     }
 
+    printf("CLIENT FD: %d\n",client);
+
     if (SELECTOR_SUCCESS != selector_register(key->s, client, &socks5_handler,OP_READ, state))
     {
         fprintf(stderr, "Couldn't register the socket\n");

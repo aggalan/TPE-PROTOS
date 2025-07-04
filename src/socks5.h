@@ -21,6 +21,7 @@ enum socks_v5state {
     REQUEST_READ,
     REQUEST_WRITE,
     REQUEST_CONNECTING,
+    //RELAY,
     DONE,
     ERROR,
     ORIGIN_CONNECT,

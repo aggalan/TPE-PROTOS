@@ -170,6 +170,7 @@ unsigned request_connecting(struct selector_key *key) {
         LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
+
     printf("CONNECTED!");
     return REQUEST_WRITE;
 }
@@ -200,6 +201,7 @@ unsigned request_create_connection(struct selector_key *key) {
             LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
             return ERROR;
         }
+
         LOG_INFO("Attemping connection with Client Number %d\n",data->origin_fd);
         return REQUEST_CONNECTING;
     }
@@ -263,13 +265,15 @@ unsigned request_write(struct selector_key *key) {
 
     size_t write_size;
 
+    printf("FD to send to: %d, origin_fd: %d\n", data->client_fd, data->origin_fd);
+
     uint8_t * write_buffer = buffer_read_ptr(&data->write_buffer, &write_size);
     printf("Buffer to send (%zu bytes):", write_size);
     for (size_t i = 0; i < write_size; i++) {
         printf(" %02x", write_buffer[i]);
     }
     printf("\n");
-    ssize_t write_count = send(key->fd, write_buffer, write_size, MSG_NOSIGNAL);
+    ssize_t write_count = send(data->client_fd, write_buffer, write_size, MSG_NOSIGNAL);
     printf("Sent %zu bytes\n", write_count);
     if (write_count < 0) {
         printf("request response send error\n");
