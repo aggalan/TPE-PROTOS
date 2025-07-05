@@ -10,16 +10,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include "selector.h"
+#include "../selector/selector.h"
 #include "tests.h"
 #include "socks5.h"
-#include "buffer.h"
-#include "stm.h"
-#include "parser.h"
-#include "metrics.h"
-#include "./negotiation/negotiation.h"
-#include "./authentication/authentication.h"
-#include "./request/request.h"
+#include "../buffer/buffer.h"
+#include "../stm/stm.h"
+#include "../parser/parser.h"
+#include "../metrics/metrics.h"
+#include "../negotiation/negotiation.h"
+#include "../authentication/authentication.h"
+#include "../request/request.h"
 
 
 #define BUFFER_SIZE 4096

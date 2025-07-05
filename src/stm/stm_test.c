@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <check.h>
-#include "selector.h"
+#include "../selector/selector.h"
 #include "stm.h"
 
 enum test_states {

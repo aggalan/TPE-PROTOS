@@ -20,11 +20,11 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 
-#include "args.h"
-#include "socks5.h"
-#include "selector.h"
+#include "args/args.h"
+#include "socks5/socks5.h"
+#include "selector/selector.h"
 #include "logging/logger.h"
-#include "metrics.h"
+#include "metrics/metrics.h"
 
 extern const struct fd_handler management_handler;
 

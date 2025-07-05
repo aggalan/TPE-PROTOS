@@ -1,0 +1,6 @@
+C:\Windows\system32\wsl.exe --distribution WLinux --exec /bin/bash -c "export CMAKE_COLOR_DIAGNOSTICS=ON && export CLION_IDE=TRUE && export JETBRAINS_IDE=TRUE && cd '/mnt/d/Desktop/ITBA/2025/Primer Cuatrimestre/72.07 - Protocolos de Comunicación/TPE/Repo/Repo 2/TPE-PROTOS/cmake-build-debug' && /usr/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G 'CodeBlocks - Unix Makefiles' -S '/mnt/d/Desktop/ITBA/2025/Primer Cuatrimestre/72.07 - Protocolos de Comunicación/TPE/Repo/Repo 2/TPE-PROTOS' -B '/mnt/d/Desktop/ITBA/2025/Primer Cuatrimestre/72.07 - Protocolos de Comunicación/TPE/Repo/Repo 2/TPE-PROTOS/cmake-build-debug'"
+CMake Error at CMakeLists.txt:1 (cmake_minimum_required):
+  CMake 3.31 or higher is required.  You are running version 3.25.1
+
+
+-- Configuring incomplete, errors occurred!

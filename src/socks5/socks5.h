@@ -1,16 +1,16 @@
 #ifndef _SOCKS5_H_
 #define _SOCKS5_H_
 
-#include "selector.h"
-#include "buffer.h"
-#include "relay/relay.h"
-#include "./negotiation/negotiation.h"
-#include "./authentication/authentication.h"
-#include "./request/request.h"
-#include "stm.h"
-#include "authentication/authentication_parser.h"
-#include "logging/logger.h"
-#include "request/request_parser.h"
+#include "../selector/selector.h"
+#include "../buffer/buffer.h"
+#include "../relay/relay.h"
+#include "../negotiation/negotiation.h"
+#include "../authentication/authentication.h"
+#include "../request/request.h"
+#include "../stm/stm.h"
+#include "../authentication/authentication_parser.h"
+#include "../logging/logger.h"
+#include "../request/request_parser.h"
 #include <netdb.h>
 #include <stdbool.h>
 #include <sys/socket.h>

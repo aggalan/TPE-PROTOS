@@ -1,10 +1,10 @@
 // management.c
 // Módulo de administración integrado: create/delete users, stats, config
 
-#include "selector.h"
-#include "logging/logger.h"
-#include "metrics.h"
-#include "admin.h"
+#include "../selector/selector.h"
+#include "../logging/logger.h"
+#include "../metrics/metrics.h"
+#include "../admin/admin.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

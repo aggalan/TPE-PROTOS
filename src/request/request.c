@@ -1,6 +1,6 @@
 #include "request.h"
 #include "request_parser.h"
-#include "../socks5.h"
+#include "../socks5/socks5.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>

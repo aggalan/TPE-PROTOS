@@ -1,6 +1,6 @@
 #ifndef REQUEST_PARSER_H
 #define REQUEST_PARSER_H
-#include "../buffer.h"
+#include "../buffer/buffer.h"
 #include <stdint.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

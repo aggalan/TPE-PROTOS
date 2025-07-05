@@ -1,5 +1,5 @@
 #include "negotiation.h"
-#include "../socks5.h"
+#include "../socks5/socks5.h"
 #include "metrics.h"
 #include <stdbool.h>
 #include <stdio.h>
