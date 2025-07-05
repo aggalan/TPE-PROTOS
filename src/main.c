@@ -25,6 +25,7 @@
 #include "selector/selector.h"
 #include "logging/logger.h"
 #include "metrics/metrics.h"
+#include "users/user_manager.h"
 
 extern const struct fd_handler management_handler;
 

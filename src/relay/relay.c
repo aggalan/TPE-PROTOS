@@ -49,14 +49,29 @@ unsigned relay_read(struct selector_key *key) {
 
     uint8_t *ptr = buffer_write_ptr(b, &size);
     n = recv(key->fd, ptr, size, 0);
-    if (n <= 0) {
+
+    if (n == 0)
+    {
         shutdown(*data->fd, SHUT_RD);
         data->duplex &= ~OP_READ;
-        if (*data->other->fd != -1) {
-            shutdown(*data->other->fd, SHUT_WR);
-            data->other->duplex &= ~OP_WRITE;
+        LOG_INFO("Connection closed by peer.\n");
+    }
+    else if (n < 0)
+    {
+        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+            LOG_ERROR("Error reading from fd %d: %s\n", key->fd, strerror(errno));
+            shutdown(*data->fd, SHUT_RD);
+            data->duplex &= ~OP_READ;
+            if (*data->other->fd != -1) {
+                shutdown(*data->other->fd, SHUT_WR);
+                data->other->duplex &= ~OP_WRITE;
+            }
+            return DONE; // Error handling
         }
-    } else {
+        n = 0; // No data available
+    }
+
+    else {
         buffer_write_adv(b, n);
         metrics_add_bytes(n);
     }
