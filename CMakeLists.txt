@@ -44,4 +44,6 @@ add_executable(TPE_PROTOS
         src/request/request.h
         src/request/request_parser.h
         src/relay/relay.c
-        src/relay/relay.h)
+        src/relay/relay.h
+        src/users/user_manager.c
+        src/users/user_manager.h)
