@@ -105,6 +105,13 @@ unsigned relay_write(struct selector_key *key) {
     } else {
         buffer_read_adv(b, n);
         metrics_add_bytes(n);
+
+        if (buffer_can_read(b) == 0 && !(data->other->duplex & OP_READ)) {
+            // If the buffer is empty and the other side is not interested in reading, we can close
+            LOG_INFO("Buffer empty, closing connection.\n");
+            shutdown(*data->fd, SHUT_WR);
+            data->duplex &= ~OP_WRITE;
+        } 
     }
 
     copy_compute_interests(key->s, data);
