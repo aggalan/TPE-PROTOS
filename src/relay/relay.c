@@ -1,7 +1,7 @@
 #include "relay/relay.h"
 
 void relay_init(const unsigned state, struct selector_key *key) {
-    LOG_INFO("Creating relay...\n");
+    LOG_INFO("Creating relay... (state=%u, fd=%d)\n", state, key->fd);
     struct relay * data = &ATTACHMENT(key)->client.relay;
     data->fd = &ATTACHMENT(key)->client_fd;
     data->rb = &ATTACHMENT(key)->read_buffer;
@@ -15,7 +15,10 @@ void relay_init(const unsigned state, struct selector_key *key) {
     data->wb = &ATTACHMENT(key)->read_buffer;
     data->duplex = OP_READ | OP_WRITE;
     data->other = &ATTACHMENT(key)->client.relay;
-    selector_set_interest(key->s, ATTACHMENT(key)->origin_fd, OP_READ);
+    if (ATTACHMENT(key)->origin_fd != -1) {
+        LOG_INFO("relay_init: File Descripttor IS valid!");
+        selector_set_interest(key->s, ATTACHMENT(key)->origin_fd, OP_READ);
+    }    
     LOG_INFO("All relay elements created!\n");
     LOG_INFO("Relaying...\n");
 }
