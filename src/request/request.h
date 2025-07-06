@@ -13,6 +13,7 @@ unsigned request_read (struct selector_key *key);
 unsigned request_write (struct selector_key *key);
 unsigned request_connecting(struct selector_key *key);
 void request_connecting_init(const unsigned state, struct selector_key *key);
+void* request_dns_resolve(void *data);
 
 
 #endif //REQUEST_H

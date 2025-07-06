@@ -8,6 +8,7 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -15,8 +16,11 @@
 #include <sys/fcntl.h>
 #include "../logging/logger.h"
 
+
 unsigned request_create_connection(struct selector_key *key);
 unsigned request_error(SocksClient *data, struct selector_key *key, unsigned status);
+
+void* request_dns_resolve(void *data);
 
 void request_init(const unsigned state,struct selector_key * key) {
     LOG_INFO("Creating request...\n");
@@ -30,127 +34,141 @@ void request_init(const unsigned state,struct selector_key * key) {
 
 unsigned request_setup(struct selector_key *key) {
     SocksClient *data = ATTACHMENT(key);
-    LOG_INFO("Setting up request...\n");
+    LOG_INFO("Setting up request...");
     ReqParser *parser = &data->client.request_parser;
     uint8_t atyp = parser->atyp;
-    socklen_t dest_len = 0; //TODO: check
-    int setup_ok = 0; //TODO: check
 
-    struct sockaddr_storage dest_addr;
-     memset(&dest_addr, 0, sizeof(dest_addr));
-     //TODO: MALLOC?
+    struct sockaddr_storage *dest_addr = malloc(sizeof(struct sockaddr_storage));
+    if (!dest_addr) {
+        LOG_ERROR("Failed to allocate dest_addr");
+        return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
+    }
+    memset(dest_addr, 0, sizeof(struct sockaddr_storage));
+    data->dest_addr = dest_addr; 
 
-    if(atyp == IPV4) {
-        LOG_INFO("IPV4 setup\n");
-        // struct sockaddr_in* addr4 = malloc(sizeof(struct sockaddr_in));
-        // if(addr4 == NULL) {
-        //     printf("Failed to allocate memory for IPV4 address\n");
-        //     return REQUEST_WRITE;
-        // }
-        struct sockaddr_in *addr4 = (struct sockaddr_in *)&dest_addr;
-        *addr4 = (struct sockaddr_in){
-            .sin_family = AF_INET,
-            .sin_addr = parser->dst_addr.ipv4,
-            .sin_port = htons(parser->dst_port)
-        };
-        dest_len = sizeof(struct sockaddr_in);
-        data->origin_resolution = malloc(sizeof(struct addrinfo));
-        if(data->origin_resolution == NULL){
-            printf("Failed to allocate memory for origin resolution\n");
-            free(addr4);
-            return REQUEST_WRITE;
-        }
-        *data->origin_resolution = (struct addrinfo){
-            .ai_family = AF_INET,
-            .ai_socktype = SOCK_STREAM,
-            .ai_protocol = IPPROTO_TCP,
-            .ai_addrlen = sizeof(*addr4),
-            .ai_addr = (struct sockaddr *)addr4,
-        };
-        setup_ok = 1;
-        char ipstr[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &addr4->sin_addr, ipstr, sizeof(ipstr));
-        LOG_INFO("Finished IPV4 setup\n");
-        return request_create_connection(key);
-
-    } 
-    else if(atyp == IPV6) {
-        printf("DEBUG: IPV6\n");
-        struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&dest_addr;
-        *addr6 = (struct sockaddr_in6){
-            .sin6_family = AF_INET6,
-            .sin6_addr = parser->dst_addr.ipv6,
-            .sin6_port = htons(parser->dst_port)
-        };
-        dest_len = sizeof(struct sockaddr_in6);
-        data->origin_resolution = malloc(sizeof(struct addrinfo));
-        if(data->origin_resolution == NULL){
-            printf("Failed to allocate memory for origin resolution\n");
-            free(addr6);
-            return REQUEST_WRITE;
-        }
-        *data->origin_resolution = (struct addrinfo){
-            .ai_family = AF_INET6,
-            // .ai_socktype = SOCK_STREAM,
-            // .ai_protocol = IPPROTO_TCP,
-            .ai_addrlen = sizeof(struct sockaddr_in6),
-            .ai_addr = (struct sockaddr *)addr6,
-        };
-        setup_ok = 1;
-        char ipstr[INET6_ADDRSTRLEN];
-        inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
-        printf("[DEBUG] IPV6 setup ok: [%s]:%d\n", ipstr, ntohs(addr6->sin6_port));
-         request_create_connection(key);
-
-    } 
-    else if(atyp == DOMAINNAME) {
-        printf("DEBUG: DOMAINNAME\n");
-        char host[REQ_MAX_DN_LENGHT + 1] = {0};
-        memcpy(host, parser->dst_addr.domainname + 1, parser->dst_addr.domainname[0]);
-        host[parser->dst_addr.domainname[0]] = '\0';
-        char portstr[6];
-        snprintf(portstr, sizeof(portstr), "%u", parser->dst_port);
-
-        struct addrinfo hints = {0}, *res = NULL;
-        hints.ai_family = AF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-        int err = getaddrinfo(host, portstr, &hints, &res);
-        if (err == 0 && res != NULL) {
-            // memcpy(&dest_addr, res->ai_addr, res->ai_addrlen);
-            // dest_len = res->ai_addrlen;
-            setup_ok = 1;
-            char ipstr[INET6_ADDRSTRLEN];
-            void *addrptr = NULL;
-            int port = 0;
-            if (res->ai_family == AF_INET) {
-                struct sockaddr_in *sin = (struct sockaddr_in *)res->ai_addr;
-                addrptr = &sin->sin_addr;
-                port = ntohs(sin->sin_port);
-                inet_ntop(AF_INET, addrptr, ipstr, sizeof(ipstr));
-                printf("[DEBUG] DOMAINNAME resolved to: %s:%d\n", ipstr, port);
-            } else if (res->ai_family == AF_INET6) {
-                struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)res->ai_addr;
-                addrptr = &sin6->sin6_addr;
-                port = ntohs(sin6->sin6_port);
-                inet_ntop(AF_INET6, addrptr, ipstr, sizeof(ipstr));
-                printf("[DEBUG] DOMAINNAME resolved to: [%s]:%d\n", ipstr, port);
+    switch (atyp) {
+        case IPV4: {
+            LOG_INFO("Setting up IPV4 destination");
+            struct sockaddr_in *addr4 = (struct sockaddr_in *)dest_addr;
+            *addr4 = (struct sockaddr_in){
+                .sin_family = AF_INET,
+                .sin_port = htons(parser->dst_port),
+                .sin_addr = parser->dst_addr.ipv4
+            };
+            data->origin_resolution = malloc(sizeof(struct addrinfo));
+            if (!data->origin_resolution) {
+                LOG_ERROR("Failed to allocate origin_resolution");
+                free(dest_addr);
+                return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
             }
-
-            data->origin_resolution = res;
-            request_create_connection(key);
-        } else {
-            printf("DEBUG: Failed to resolve domain name: %s\n", gai_strerror(err));
+            *data->origin_resolution = (struct addrinfo){
+                .ai_family = AF_INET,
+                .ai_socktype = SOCK_STREAM,
+                .ai_protocol = IPPROTO_TCP,
+                .ai_addrlen = sizeof(struct sockaddr_in),
+                .ai_addr = (struct sockaddr *)addr4,
+                .ai_next = NULL
+            };
+            char ipstr[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &addr4->sin_addr, ipstr, sizeof(ipstr));
+            LOG_INFO("IPV4 setup: [%s]:%d", ipstr, ntohs(addr4->sin_port));
+            return request_create_connection(key);
+        }
+        case IPV6: {
+            LOG_INFO("Setting up IPV6 destination");
+            struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)dest_addr;
+            *addr6 = (struct sockaddr_in6){
+                .sin6_family = AF_INET6,
+                .sin6_port = htons(parser->dst_port),
+                .sin6_addr = parser->dst_addr.ipv6
+            };
+            data->origin_resolution = malloc(sizeof(struct addrinfo));
+            if (!data->origin_resolution) {
+                LOG_ERROR("Failed to allocate origin_resolution");
+                free(dest_addr);
+                return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
+            }
+            *data->origin_resolution = (struct addrinfo){
+                .ai_family = AF_INET6,
+                .ai_socktype = SOCK_STREAM,
+                .ai_protocol = IPPROTO_TCP,
+                .ai_addrlen = sizeof(struct sockaddr_in6),
+                .ai_addr = (struct sockaddr *)addr6,
+                .ai_next = NULL
+            };
+            char ipstr[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
+            LOG_INFO("IPV6 setup: [%s]:%d", ipstr, ntohs(addr6->sin6_port));
+            return request_create_connection(key);
+        }
+        case DOMAINNAME: {
+            LOG_INFO("Setting up DOMAINNAME resolution");
+            pthread_t dns_thread;
+            struct selector_key *key_copy = malloc(sizeof(*key));
+            if (!key_copy) {
+                LOG_ERROR("Failed to allocate key_copy for DNS thread");
+                free(dest_addr);
+                return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
+            }
+            memcpy(key_copy, key, sizeof(*key));
+            // El fd se pausa mientras se resuelve DNS
+            if (selector_set_interest_key(key, OP_NOOP) != SELECTOR_SUCCESS) {
+                LOG_ERROR("Failed to set interest OP_NOOP for DNS resolve");
+                free(key_copy);
+                free(dest_addr);
+                return ERROR;
+            }
+            // IMPORTANTE: te lo pido por favor libera el thread de key_copy y dest_addr
+            if (pthread_create(&dns_thread, NULL, request_dns_resolve, key_copy) != 0) {
+                LOG_ERROR("Failed to create DNS resolution thread");
+                free(key_copy);
+                free(dest_addr);
+                return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
+            }
+            return REQUEST_RESOLVE;
+            break;
+        }
+        default: {
+            LOG_ERROR("Unsupported address type %d", atyp);
+            parser->status = REQ_ERROR_ADDRESS_TYPE_NOT_SUPPORTED;
+            fill_request_answer(parser, &data->write_buffer);
+            selector_set_interest_key(key, OP_WRITE);
+            free(dest_addr);
+            return REQUEST_WRITE;
         }
     }
+    LOG_ERROR("Unexpected path in request_setup (atyp=%d)", atyp);
+    return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
+}
 
-    if (!setup_ok) {
-        parser->status = REQ_ERROR_ADDRESS_TYPE_NOT_SUPPORTED;
-        fill_request_answer(parser, &data->write_buffer);
-        selector_set_interest_key(key, OP_WRITE);
-        return REQUEST_WRITE;
+void* request_dns_resolve(void *data) {
+    LOG_INFO("Resolving DNS...\n");
+
+    struct selector_key *key = (struct selector_key *)data;
+    SocksClient *socks = ATTACHMENT(key);   
+
+    pthread_detach(pthread_self());
+
+    struct addrinfo hints = {
+        .ai_family = AF_UNSPEC,
+        .ai_socktype = SOCK_STREAM,
+        .ai_flags = AI_PASSIVE,
+        .ai_protocol = 0,
+        .ai_canonname = NULL,
+        .ai_addr = NULL,
+        .ai_next = NULL,
+    };
+
+    char service[6] = {0};
+    sprintf(service, "%d", (int)socks->client.request_parser.dst_port);
+
+    int err = getaddrinfo(socks->client.request_parser.dst_addr.domainname, service, &hints, &socks->origin_resolution);
+    if (err != 0) {
+        socks->origin_resolution = NULL;
     }
-
-    return REQUEST_WRITE;
+    selector_notify_block(key->s, key->fd);
+    free(data);
+    return NULL;
 }
 
 void request_connecting_init(const unsigned state,struct selector_key *key) {

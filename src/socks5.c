@@ -83,6 +83,10 @@ static const struct state_definition client_actions[] = {
     .on_write_ready = request_connecting,
 },
     {
+    .state = REQUEST_RESOLVE,
+    .on_arrival = request_dns_resolve,
+},
+    {
     .state = RELAY,
         .on_arrival = relay_init,
         .on_read_ready = relay_read,
@@ -244,6 +248,10 @@ void _closeConnection(struct selector_key *key)
         {
             freeaddrinfo(data->origin_resolution);
         }
+    }
+    if (data->dest_addr != NULL) {
+        free(data->dest_addr);
+        data->dest_addr = NULL;
     }
     free(data);
 

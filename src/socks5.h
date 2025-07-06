@@ -23,6 +23,7 @@ enum socks_v5state {
     REQUEST_READ,
     REQUEST_WRITE,
     REQUEST_CONNECTING,
+    REQUEST_RESOLVE,
     RELAY,
     DONE,
     ERROR,
@@ -53,6 +54,7 @@ typedef struct socks5 {
     bool                       closed;
     struct state_machine       stm;
     struct sockaddr_storage    client_addr;
+    struct sockaddr_storage   *dest_addr;
     struct addrinfo*           origin_resolution;
     socklen_t                  client_addr_len;
     union {
