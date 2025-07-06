@@ -141,10 +141,6 @@ unsigned request_setup(struct selector_key *key) {
     return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
 }
 
-void request_dns_resolve_init(const unsigned state, struct selector_key *key)
-{
-    LOG_INFO("INIT DNS");
-}
 void* request_dns_resolve(void *data) {
     LOG_INFO("Resolving DNS...\n");
 
@@ -170,13 +166,14 @@ void* request_dns_resolve(void *data) {
         socks->origin_resolution = NULL;
     }
     selector_notify_block(key->s, key->fd);
-   free(data);
+
     LOG_INFO("DNS resolve done");
+    free(key);
     return NULL;
 }
 
 unsigned request_resolve_done(struct selector_key *key) {
-    LOG_INFO("Resolving request...\n");
+    LOG_INFO("[resolve done]:     Resolving request...\n");
     SocksClient *data = ATTACHMENT(key);
     if (data->origin_resolution == NULL) {
         //LOG_ERROR("DNS resolution failed for %s:%d", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);

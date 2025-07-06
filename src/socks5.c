@@ -243,7 +243,7 @@ void _closeConnection(struct selector_key *key)
     if (clientSocket != ERROR_CODE)
     {
         selector_unregister_fd(key->s,clientSocket);
-        close(serverSocket);
+        close(clientSocket);
     }
 
     if (data->origin_resolution != NULL)
