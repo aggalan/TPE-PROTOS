@@ -77,17 +77,18 @@ static const struct state_definition client_actions[] = {
         .state = REQUEST_WRITE,
         .on_write_ready = request_write,
     },
-{
-    .state = REQUEST_CONNECTING,
-    .on_arrival = request_connecting_init,
-    .on_write_ready = request_connecting,
-},
     {
-    .state = REQUEST_RESOLVE,
-    .on_block_ready = request_resolve_done,
-},
+        .state = REQUEST_CONNECTING,
+        .on_arrival = request_connecting_init,
+        .on_write_ready = request_connecting,
+    },
     {
-    .state = RELAY,
+        .state = REQUEST_RESOLVE,
+        .on_arrival = request_dns_resolve_init,
+        .on_block_ready = request_resolve_done,
+    },
+    {
+        .state = RELAY,
         .on_arrival = relay_init,
         .on_read_ready = relay_read,
         .on_write_ready = relay_write,
@@ -249,10 +250,10 @@ void _closeConnection(struct selector_key *key)
             freeaddrinfo(data->origin_resolution);
         }
     }
-    if (data->dest_addr != NULL) {
-        free(data->dest_addr);
-        data->dest_addr = NULL;
-    }
+    //if (data->dest_addr != NULL) {
+    //    free(data->dest_addr);
+    //   data->dest_addr = NULL;
+    //}
     free(data);
 
 }

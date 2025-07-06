@@ -44,7 +44,7 @@ unsigned request_setup(struct selector_key *key) {
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
     memset(dest_addr, 0, sizeof(struct sockaddr_storage));
-    data->dest_addr = dest_addr; 
+    //data->dest_addr = dest_addr; 
 
     switch (atyp) {
         case IPV4: {
@@ -144,6 +144,10 @@ unsigned request_setup(struct selector_key *key) {
     return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
 }
 
+void request_dns_resolve_init(const unsigned state, struct selector_key *key)
+{
+    LOG_INFO("INIT DNS");
+}
 void* request_dns_resolve(void *data) {
     LOG_INFO("Resolving DNS...\n");
 
