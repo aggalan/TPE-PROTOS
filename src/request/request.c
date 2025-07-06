@@ -310,14 +310,25 @@ unsigned request_write(struct selector_key *key) {
         return REQUEST_WRITE;
     }
 
-    if (has_request_errors(&data->client.request_parser) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
+    // ADD THIS VALIDATION BEFORE TRANSITIONING TO RELAY
+    if (data->origin_fd == ERROR) {
+        LOG_ERROR("Cannot transition to RELAY: origin connection not established");
         return ERROR;
     }
 
-    LOG_INFO("Request ended\n");
+    if (has_request_errors(&data->client.request_parser)) {
+        LOG_ERROR("Request has errors, cannot transition to RELAY");
+        return ERROR;
+    }
+
+    if (selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
+        LOG_ERROR("Failed to set interest for RELAY state");
+        return ERROR;
+    }
+
+    LOG_INFO("Request ended, transitioning to RELAY");
     return RELAY;
 }
-
 
 
 
