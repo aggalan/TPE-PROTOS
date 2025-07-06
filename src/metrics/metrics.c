@@ -26,6 +26,14 @@ void metrics_add_bytes(size_t n) {
 struct metrics metrics_get(void) {
     return m;
 }
+char * metrics_to_string() {
+    static char buffer[256];
+    struct metrics m = metrics_get();
+    snprintf(buffer, sizeof(buffer),
+             "Total connections: %lu, Bytes transferred: %lu, Concurrent connections: %u",
+             m.total_connections, m.bytes_transferred, m.concurrent_connections);
+    return buffer;
+}
 
 void log_metrics() {
     struct metrics m = metrics_get();

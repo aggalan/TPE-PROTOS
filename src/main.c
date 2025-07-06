@@ -26,8 +26,7 @@
 #include "logging/logger.h"
 #include "metrics/metrics.h"
 #include "users/user_manager.h"
-
-extern const struct fd_handler management_handler;
+#include "management/management.h"
 
 static bool done = false;
 
@@ -104,12 +103,19 @@ int main(const int argc, const char** argv) {
     };
     selector_register(selector, socks_sock, &socksv5, OP_READ, NULL);
 
+
+
     int mng_sock = setup_listener(args.mng_addr, args.mng_port);
     if (mng_sock < 0) {
         perror("bind/listen management");
         return 1;
     }
     LOG_INFO("Listening management on %s:%hu\n", args.mng_addr, args.mng_port);
+    const struct fd_handler management_handler = {
+            .handle_read  = mgmt_accept,
+            .handle_write = NULL,
+            .handle_close = NULL
+    };
     selector_register(selector, mng_sock, &management_handler, OP_READ, NULL);
 
     while (!done) {

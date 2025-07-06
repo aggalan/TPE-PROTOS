@@ -1,3 +1,4 @@
-ToolSet: Pengwin (local)Options: 
+ToolSet: 1.0 (local)Ninja: 1.12.1@/Users/ivovilamowski/Applications/CLion.app/Contents/bin/ninja/mac/aarch64/ninja
+Options: 
 
 Options:

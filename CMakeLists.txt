@@ -1,49 +1,29 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.16)
 project(TPE_PROTOS C)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -std=gnu99 -g")
 
-include_directories(src)
-include_directories(src/negotiation)
+#
+# Collect all source files under src/, excluding unit tests ("*_test.c").
+# This mirrors the Makefile behaviour so the CMake build produces the same
+# executable.
+#
+file(GLOB_RECURSE ALL_SRCS "src/*.c")
+set(PROD_SRCS "")
+foreach(f ${ALL_SRCS})
+    if (NOT f MATCHES "_test\\.c$")
+        list(APPEND PROD_SRCS ${f})
+    endif()
+endforeach()
 
-add_executable(TPE_PROTOS
-        src/negotiation/negotiation.c
-        src/negotiation/negotiation.h
-        src/negotiation/negotiation_parser.c
-        src/negotiation/negotiation_parser.h
-        src/args/args.c
-        src/args/args.h
-        src/buffer/buffer.c
-        src/buffer/buffer.h
-        src/buffer/buffer_test.c
-        src/main.c
-        src/netutils/netutils.c
-        src/netutils/netutils.h
-        src/netutils/netutils_test.c
-        src/parser/parser.c
-        src/parser/parser.h
-        src/parser/parser_test.c
-        src/parser/parser_utils.c
-        src/parser/parser_utils.h
-        src/parser/parser_utils_test.c
-        src/selector/selector.c
-        src/selector/selector.h
-        src/selector/selector_test.c
-        src/socks5/socks5.c
-        src/socks5/socks5.h
-        src/stm/stm.c
-        src/stm/stm.h
-        src/stm/stm_test.c
-        src/socks5/tests.h
-        src/authentication/authentication.c
-        src/authentication/authentication.h
-        src/authentication/authentication_parser.c
-        src/authentication/authentication_parser.h
-        src/request/request.c
-        src/request/request_parser.c
-        src/request/request.h
-        src/request/request_parser.h
-        src/relay/relay.c
-        src/relay/relay.h
-        src/users/user_manager.c
-        src/users/user_manager.h)
+# Include every subdirectory in src so headers are found automatically.
+file(GLOB SUBDIRS LIST_DIRECTORIES true "src" "src/*")
+foreach(dir ${SUBDIRS})
+    if (IS_DIRECTORY ${dir})
+        include_directories(${dir})
+    endif()
+endforeach()
+
+add_executable(TPE_PROTOS ${PROD_SRCS})
+target_link_libraries(TPE_PROTOS pthread)

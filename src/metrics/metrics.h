@@ -14,6 +14,7 @@ void metrics_connection_opened(void);
 void metrics_connection_closed(void);
 void metrics_add_bytes(size_t n);
 struct metrics metrics_get(void);
+char * metrics_to_string();
 void log_metrics();
 
 #endif // METRICS_H
