@@ -131,7 +131,7 @@ unsigned request_setup(struct selector_key *key) {
         default: {
             LOG_ERROR("Unsupported address type %d", atyp);
             parser->status = REQ_ERROR_ADDRESS_TYPE_NOT_SUPPORTED;
-            fill_request_answer(parser, &data->write_buffer);
+            fill_request_answer(parser, &data->write_buffer, key);
             selector_set_interest_key(key, OP_WRITE);
             free(dest_addr);
             return REQUEST_WRITE;
@@ -159,9 +159,11 @@ void* request_dns_resolve(void *data) {
         .ai_next = NULL,
     };
 
-    char service[6] = {0};
+    char service[7];
     sprintf(service, "%d", (int)socks->client.request_parser.dst_port);
+    printf("Resolving %s:%s\n", socks->client.request_parser.dst_addr.domainname, service);
     int err = getaddrinfo((char *)socks->client.request_parser.dst_addr.domainname, service, &hints, &socks->origin_resolution);
+    printf("ERROR: %d\n", err);
     if (err != 0) {
         socks->origin_resolution = NULL;
     }
@@ -176,11 +178,11 @@ unsigned request_resolve_done(struct selector_key *key) {
     LOG_INFO("[resolve done]:     Resolving request...\n");
     SocksClient *data = ATTACHMENT(key);
     if (data->origin_resolution == NULL) {
-        //LOG_ERROR("DNS resolution failed for %s:%d", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);
+        LOG_ERROR("DNS resolution failed for %s:%d", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);
         return request_error(data, key, REQ_ERROR_HOST_UNREACHABLE);
     }
 
-    //LOG_INFO("DNS resolution successful for %s:%d", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);
+    //LOG_INFO("DNS resolution successful for %s:%d", data->client.request_parser.dst_addr., data->client.request_parser.dst_port);
     LOG_INFO("RESOLVED!!!");
     return request_create_connection(key);
 }
@@ -198,7 +200,7 @@ unsigned request_connecting(struct selector_key *key) {
     }
 
     //mandar la respuesta
-    if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser, &data->write_buffer)) {
+    if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser, &data->write_buffer, key)) {
         LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
@@ -210,9 +212,9 @@ unsigned request_connecting(struct selector_key *key) {
 unsigned request_create_connection(struct selector_key *key) {
     SocksClient * data = ATTACHMENT(key);
     LOG_INFO("Creating socket\n");
-    data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | O_NONBLOCK, data->origin_resolution->ai_protocol);
+    data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | O_NONBLOCK, 0);
     if(data->origin_fd < 0){
-        data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM, data->origin_resolution->ai_protocol);
+        data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM, 0);
         if(data->origin_fd < 0){
             printf("Failed to create socket from client %d\n",data->origin_fd);
             return ERROR;
@@ -229,7 +231,7 @@ unsigned request_create_connection(struct selector_key *key) {
             close(data->origin_fd);
             return ERROR;
         }
-        if (selector_set_interest(key->s, key->fd,OP_NOOP) != SELECTOR_SUCCESS) {
+        if (selector_set_interest_key(key,OP_NOOP) != SELECTOR_SUCCESS) {
             LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
             return ERROR;
         }
@@ -244,7 +246,7 @@ unsigned request_create_connection(struct selector_key *key) {
         struct addrinfo *next = data->origin_resolution->ai_next; //Preparamos el proximo
         data->origin_resolution->ai_next = NULL; //Lo detacheamos de la Lista para hacerle free
         freeaddrinfo(data->origin_resolution); //Free
-        data->origin_resolution = next; //Vamos al proximo
+        data->origin_resolution = next;
         return request_create_connection(key); //Empezamos again
     }
 
@@ -256,7 +258,7 @@ unsigned request_error(SocksClient *data, struct selector_key *key, unsigned sta
     ReqParser *parser = &data->client.request_parser;
     parser->status = status;
     parser->state = REQ_ERROR;
-    fill_request_answer(parser, &data->write_buffer);
+    fill_request_answer(parser, &data->write_buffer, key);
     selector_set_interest_key(key, OP_WRITE);
     return REQUEST_WRITE;
 }
@@ -282,7 +284,7 @@ unsigned request_read(struct selector_key *key) {
         if(!has_request_errors(&data->client.request_parser)) {
             return request_setup(key);
         }
-        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser , &data->write_buffer)) {
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser , &data->write_buffer, key)) {
             printf("No methods allowed or selector error\n");
             return ERROR;
         }
@@ -311,7 +313,7 @@ unsigned request_write(struct selector_key *key) {
     }
 
     // ADD THIS VALIDATION BEFORE TRANSITIONING TO RELAY
-    if (data->origin_fd == ERROR) {
+    if (data->origin_fd == -1) {
         LOG_ERROR("Cannot transition to RELAY: origin connection not established");
         return ERROR;
     }

@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <arpa/inet.h>
+
+#include "socks5.h"
 #include "../logging/logger.h"
 
 void init_request_parser(ReqParser *p) {
@@ -80,10 +82,11 @@ ReqState request_parse(ReqParser* p, buffer* b) {
                         p->state = REQ_DST_PORT;
                     }
                 } else if (p->atyp == DOMAINNAME) {
-                    p->dst_addr.domainname[p->buf_idx + 1] = c;
+                    p->dst_addr.domainname[p->buf_idx] = c;
                     p->buf_idx++;
+
                     if (p->buf_idx == p->dnlen) {
-                        p->dst_addr.domainname[0] = p->dnlen;
+                        p->dst_addr.domainname[p->dnlen] = '\0';
                         p->buf_idx = 0;
                         p->state = REQ_DST_PORT;
                     }
@@ -123,29 +126,52 @@ bool has_request_errors(ReqParser *p) {
     return p == NULL || p->state == REQ_ERROR;
 }
 
-ReqCodes fill_request_answer(ReqParser *p, buffer *buffer) {
+ReqCodes fill_request_answer(ReqParser *p, buffer *buffer, struct selector_key * key) {
     if (!buffer_can_write(buffer))
         return REQ_FULLBUFFER;
 
-    uint8_t answer[10] = {
-        0x05, // Version
-        p->status, // REP:
-        0x00, // RSV
-        p->atyp, // ATYP: IPv4
-        127, 0, 0, 1, // BND.ADDR
-        0x30, 0x39   // BND.PORT = 12345
-    };
-
+    SocksClient *data = ATTACHMENT(key);
 
     LOG_INFO("Filling request answer...\n");
 
+    buffer_write(buffer, 0x05);             // VER
+    buffer_write(buffer, p->status);        // REP
+    buffer_write(buffer, 0x00);             // RSV
 
-    for (int i = 0; i < 10; i++) {
-        if (!buffer_can_write(buffer)) {
-            return REQ_FULLBUFFER;
-        }
-        buffer_write(buffer, answer[i]);
+    // Ahora elegimos qué tipo de dirección mandamos
+    ReqAtyp response_type = p->atyp;
+
+    if (response_type == DOMAINNAME) {
+        if (data->origin_resolution->ai_family == AF_INET)
+            response_type = IPV4;
+        else response_type = IPV6;
     }
+
+    buffer_write(buffer, response_type);
+
+    switch (response_type) {
+        case IPV4:
+            buffer_write(buffer, 127);
+            buffer_write(buffer, 0);
+            buffer_write(buffer, 0);
+            buffer_write(buffer, 1);
+            break;
+
+        case IPV6: {
+            uint8_t dummy_ipv6[16] = {0};
+            for (int i = 0; i < 16; i++) {
+                buffer_write(buffer, dummy_ipv6[i]);
+            }
+            break;
+        }
+
+        default:
+            LOG_ERROR("Unsupported ATYP %d in fill_request_answer", response_type);
+            return REQ_ERROR_GENERAL_FAILURE;
+    }
+
+    buffer_write(buffer, 0x00);
+    buffer_write(buffer, 0x00);
 
     return REQ_OK;
 }
