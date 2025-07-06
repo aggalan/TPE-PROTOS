@@ -44,7 +44,7 @@ unsigned request_setup(struct selector_key *key) {
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
     memset(dest_addr, 0, sizeof(struct sockaddr_storage));
-    //data->dest_addr = dest_addr; 
+    //data->dest_addr = dest_addr; // Guarda el puntero para liberar luego si corresponde
 
     switch (atyp) {
         case IPV4: {
@@ -111,8 +111,13 @@ unsigned request_setup(struct selector_key *key) {
                 return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
             }
             memcpy(key_copy, key, sizeof(*key));
-
             // El fd se pausa mientras se resuelve DNS
+            if (selector_set_interest_key(key, OP_NOOP) != SELECTOR_SUCCESS) {
+                LOG_ERROR("Failed to set interest OP_NOOP for DNS resolve");
+                free(key_copy);
+                free(dest_addr);
+                return ERROR;
+            }
             // IMPORTANTE: te lo pido por favor libera el thread de key_copy y dest_addr
             if (pthread_create(&dns_thread, NULL, request_dns_resolve, key_copy) != 0) {
                 LOG_ERROR("Failed to create DNS resolution thread");
@@ -120,14 +125,6 @@ unsigned request_setup(struct selector_key *key) {
                 free(dest_addr);
                 return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
             }
-
-            if (selector_set_interest_key(key, OP_NOOP) != SELECTOR_SUCCESS) {
-                LOG_ERROR("Failed to set interest OP_NOOP for DNS resolve");
-                free(key_copy);
-                free(dest_addr);
-                return ERROR;
-            }
-
             return REQUEST_RESOLVE;
             break;
         }

@@ -29,12 +29,14 @@
 static void socksv5_read(struct selector_key *key);
 static void socksv5_write(struct selector_key *key);
 static void socksv5_close(struct selector_key *key);
+static void socksv5_block(struct selector_key *key);
 
 
 static const struct fd_handler socks5_handler = {
     .handle_read = socksv5_read,
     .handle_write = socksv5_write,
     .handle_close = socksv5_close,
+    .handle_block = socksv5_block,
 };
 
 
@@ -84,7 +86,6 @@ static const struct state_definition client_actions[] = {
     },
     {
         .state = REQUEST_RESOLVE,
-        .on_arrival = request_dns_resolve_init,
         .on_block_ready = request_resolve_done,
     },
     {
@@ -191,6 +192,13 @@ static void socksv5_read(struct selector_key *key)
     if (ERROR == st || DONE == st)
     {
         // socksv5_done(key);
+    }
+}
+static void socksv5_block(struct selector_key *key) {
+    struct state_machine* stm = &ATTACHMENT(key)->stm;
+    const enum socks_v5state st = stm_handler_block(stm, key);
+    if (st == ERROR || st == DONE) {
+       // closeConnection(key);
     }
 }
 
