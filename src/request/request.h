@@ -14,6 +14,7 @@ unsigned request_write (struct selector_key *key);
 unsigned request_connecting(struct selector_key *key);
 void request_connecting_init(const unsigned state, struct selector_key *key);
 void* request_dns_resolve(void *data);
+unsigned request_resolve_done(struct selector_key *key);
 
 
 #endif //REQUEST_H

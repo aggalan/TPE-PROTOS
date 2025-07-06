@@ -84,7 +84,7 @@ static const struct state_definition client_actions[] = {
 },
     {
     .state = REQUEST_RESOLVE,
-    .on_arrival = request_dns_resolve,
+    .on_block_ready = request_resolve_done,
 },
     {
     .state = RELAY,

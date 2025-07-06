@@ -537,7 +537,6 @@ selector_notify_block(fd_selector  s,
 
     // notificamos al hilo principal
     pthread_kill(s->selector_thread, conf.signal);
-
 finally:
     return ret;
 }

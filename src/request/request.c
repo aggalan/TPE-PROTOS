@@ -111,13 +111,8 @@ unsigned request_setup(struct selector_key *key) {
                 return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
             }
             memcpy(key_copy, key, sizeof(*key));
+
             // El fd se pausa mientras se resuelve DNS
-            if (selector_set_interest_key(key, OP_NOOP) != SELECTOR_SUCCESS) {
-                LOG_ERROR("Failed to set interest OP_NOOP for DNS resolve");
-                free(key_copy);
-                free(dest_addr);
-                return ERROR;
-            }
             // IMPORTANTE: te lo pido por favor libera el thread de key_copy y dest_addr
             if (pthread_create(&dns_thread, NULL, request_dns_resolve, key_copy) != 0) {
                 LOG_ERROR("Failed to create DNS resolution thread");
@@ -125,6 +120,14 @@ unsigned request_setup(struct selector_key *key) {
                 free(dest_addr);
                 return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
             }
+
+            if (selector_set_interest_key(key, OP_NOOP) != SELECTOR_SUCCESS) {
+                LOG_ERROR("Failed to set interest OP_NOOP for DNS resolve");
+                free(key_copy);
+                free(dest_addr);
+                return ERROR;
+            }
+
             return REQUEST_RESOLVE;
             break;
         }
@@ -145,7 +148,7 @@ void* request_dns_resolve(void *data) {
     LOG_INFO("Resolving DNS...\n");
 
     struct selector_key *key = (struct selector_key *)data;
-    SocksClient *socks = ATTACHMENT(key);   
+    SocksClient *socks = ATTACHMENT(key);
 
     pthread_detach(pthread_self());
 
@@ -161,14 +164,27 @@ void* request_dns_resolve(void *data) {
 
     char service[6] = {0};
     sprintf(service, "%d", (int)socks->client.request_parser.dst_port);
-
-    int err = getaddrinfo(socks->client.request_parser.dst_addr.domainname, service, &hints, &socks->origin_resolution);
+    int err = getaddrinfo((char *)socks->client.request_parser.dst_addr.domainname, service, &hints, &socks->origin_resolution);
     if (err != 0) {
         socks->origin_resolution = NULL;
     }
     selector_notify_block(key->s, key->fd);
-    free(data);
+   free(data);
+    LOG_INFO("DNS resolve done");
     return NULL;
+}
+
+unsigned request_resolve_done(struct selector_key *key) {
+    LOG_INFO("Resolving request...\n");
+    SocksClient *data = ATTACHMENT(key);
+    if (data->origin_resolution == NULL) {
+        //LOG_ERROR("DNS resolution failed for %s:%d", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);
+        return request_error(data, key, REQ_ERROR_HOST_UNREACHABLE);
+    }
+
+    //LOG_INFO("DNS resolution successful for %s:%d", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);
+    LOG_INFO("RESOLVED!!!");
+    return request_create_connection(key);
 }
 
 void request_connecting_init(const unsigned state,struct selector_key *key) {
