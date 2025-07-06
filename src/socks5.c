@@ -191,14 +191,14 @@ static void socksv5_read(struct selector_key *key)
 
     if (ERROR == st || DONE == st)
     {
-        // socksv5_done(key);
+        _closeConnection(key);
     }
 }
 static void socksv5_block(struct selector_key *key) {
     struct state_machine* stm = &ATTACHMENT(key)->stm;
     const enum socks_v5state st = stm_handler_block(stm, key);
     if (st == ERROR || st == DONE) {
-       // closeConnection(key);
+        _closeConnection(key);
     }
 }
 
@@ -209,7 +209,7 @@ socksv5_write(struct selector_key *key){
 
     if (ERROR == st || DONE == st)
     {
-        // socksv5_done(key);
+        _closeConnection(key);
     }
 }
 
