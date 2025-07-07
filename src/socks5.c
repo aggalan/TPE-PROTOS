@@ -288,5 +288,5 @@ void socksv5_done(const unsigned state, struct selector_key * key)
 
 void socksv5_error(const unsigned state, struct selector_key * key){
     LOG_ERROR("Socks error\n");
-    ATTACHMENT(key)->closed = true;
+   //ATTACHMENT(key)->closed = true;
 }

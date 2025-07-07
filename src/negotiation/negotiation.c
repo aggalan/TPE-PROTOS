@@ -24,11 +24,13 @@ unsigned negotiation_read(struct selector_key *key) {
 
     uint8_t *read_buffer = buffer_write_ptr(&data->read_buffer, &read_size);
     ssize_t read_count = recv(key->fd, read_buffer, read_size, 0);
-    if (read_count <= 0) {
-        printf("Greeting_read read error\n");
+    if (read_count < 0) {
+        LOG_ERROR("recv error: %s", strerror(errno));
+        return ERROR;
+    } if (read_count == 0) {
+        LOG_INFO("Client closed the connection");
         return ERROR;
     }
-
     buffer_write_adv(&data->read_buffer, read_count);
     negotiation_parse(&data->client.negotiation_parser, &data->read_buffer);
     if (has_negotiation_read_ended(&data->client.negotiation_parser)) {

@@ -271,10 +271,18 @@ unsigned request_read(struct selector_key *key) {
 
     uint8_t *read_buffer = buffer_write_ptr(&data->read_buffer, &read_size);
     ssize_t read_count = recv(key->fd, read_buffer, read_size, 0);
-    if (read_count <= 0) {
-        printf("Greeting_read read error\n");
-        return ERROR;
+
+    if (read_count == 0) {
+        LOG_INFO("Client closed the connection\n");
+        return DONE; // Client closed connection
     }
+    if (read_count < 0) {
+        LOG_ERROR("recv error: %s", strerror(errno));
+        return ERROR; // Error in recv
+    }
+
+
+
 
     buffer_write_adv(&data->read_buffer, read_count);
     request_parse(&data->client.request_parser, &data->read_buffer);
