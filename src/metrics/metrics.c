@@ -26,7 +26,7 @@ void metrics_add_bytes(size_t n) {
 struct metrics metrics_get(void) {
     return m;
 }
-char * metrics_to_string() {
+char * metrics_to_string(void) {
     static char buffer[256];
     struct metrics m = metrics_get();
     snprintf(buffer, sizeof(buffer),

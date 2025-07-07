@@ -30,10 +30,9 @@ static int handle_stats(char *args, char **out, size_t *outlen) {
     if (!stats) return -1;
     size_t n = snprintf(NULL, 0, "%s\n", stats);
     *out = malloc(n + 1);
-    if (!*out) { free(stats); return -1; }
+    if (!*out) { return -1; }
     snprintf(*out, n + 1, "%s\n", stats);
     *outlen = n;
-    free(stats);
     return 0;
 }
 
@@ -167,6 +166,10 @@ void mgmt_accept(struct selector_key *key) {
     c->fd = fd;
     c->buf_used = 0;
     c->response = NULL;
-    struct fd_handler handler = { mgmt_read, mgmt_write, mgmt_close };
+    static const struct fd_handler handler = {
+            .handle_read  = mgmt_read,
+            .handle_write = mgmt_write,
+            .handle_close = mgmt_close,
+    };
     selector_register(key->s, fd, &handler, OP_READ, c);
 }
