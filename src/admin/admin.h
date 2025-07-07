@@ -1,7 +1,7 @@
 #ifndef ADMIN_H
 #define ADMIN_H
 
-#define USER_FILE "users.txt"
+#define USER_FILE "./src/authentication/users.txt"
 
 int admin_add_user(const char *username, const char *password);
 
