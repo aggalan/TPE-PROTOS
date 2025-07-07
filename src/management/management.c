@@ -28,6 +28,7 @@ static int handle_stats(char *args, char **out, size_t *outlen) {
     (void)args;
     char *stats = metrics_to_string();
     if (!stats) return -1;
+    LOG_INFO("Estadísticas: %s", stats);
     size_t n = snprintf(NULL, 0, "%s\n", stats);
     *out = malloc(n + 1);
     if (!*out) { return -1; }
@@ -41,6 +42,7 @@ static int handle_adduser(char *args, char **out, size_t *outlen) {
     char *password = strtok(NULL, " \t");
     if (!username || !password) return -1;
     if (admin_add_user(username, password) != 0) return -1;
+    LOG_INFO("Usuario '%s' agregado", username);
     size_t n = snprintf(NULL, 0, "Usuario '%s' creado\n", username);
     *out = malloc(n + 1);
     if (!*out) return -1;
@@ -53,6 +55,7 @@ static int handle_deluser(char *args, char **out, size_t *outlen) {
     char *username = strtok(args, " \t");
     if (!username) return -1;
     if (admin_del_user(username) != 0) return -1;
+    LOG_INFO("Usuario '%s' eliminado", username);
     size_t n = snprintf(NULL, 0, "Usuario '%s' eliminado\n", username);
     *out = malloc(n + 1);
     if (!*out) return -1;
@@ -66,6 +69,7 @@ static int handle_listusers(char *args, char **out, size_t *outlen) {
     char *list = admin_list_users();
     if (!list) return -1;
     size_t n = snprintf(NULL, 0, "%s\n", list);
+    LOG_INFO("Lista de usuarios: %s", list);
     *out = malloc(n + 1);
     if (!*out) { free(list); return -1; }
     snprintf(*out, n + 1, "%s\n", list);
