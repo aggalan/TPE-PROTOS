@@ -1,8 +1,3 @@
-/* admin_client.c: Simple management client for SOCKS5 proxy
- * Hardcoded admin login, interactive interface for management commands
- * Uses shared buffer API for socket I/O
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,11 +8,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include "../logging/logger.h"
 
-#include "../buffer//buffer.h"
+#include "../buffer/buffer.h"
 
-#define MGMT_ADDR "127.0.0.1"
-#define MGMT_PORT 8080
+#define DEFAULT_ADDR "127.0.0.1"
+#define DEFAULT_PORT 8080
 
 #define ADMIN_USER "admin"
 #define ADMIN_PASS "secret"
@@ -31,7 +27,6 @@ static int readline(char *buf, size_t size) {
     return 0;
 }
 
-/* Disable echo for password input */
 static char *get_password(char *buf, size_t size) {
     struct termios oldt, newt;
     if (tcgetattr(STDIN_FILENO, &oldt) != 0) return NULL;
@@ -47,7 +42,13 @@ static char *get_password(char *buf, size_t size) {
     return buf;
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+    const char *addr = DEFAULT_ADDR;
+    unsigned short port = DEFAULT_PORT;
+
+    if (argc >= 2) addr = argv[1];
+    if (argc >= 3) port = (unsigned short)atoi(argv[2]);
+
     char user[64], pass[64];
 
     printf("Login required\n");
@@ -69,8 +70,8 @@ int main(void) {
     struct sockaddr_in serv;
     memset(&serv, 0, sizeof(serv));
     serv.sin_family = AF_INET;
-    serv.sin_port = htons(MGMT_PORT);
-    if (inet_pton(AF_INET, MGMT_ADDR, &serv.sin_addr) <= 0) {
+    serv.sin_port = htons(port);
+    if (inet_pton(AF_INET, addr, &serv.sin_addr) <= 0) {
         perror("inet_pton");
         close(sock);
         return 1;
@@ -81,10 +82,12 @@ int main(void) {
         return 1;
     }
 
+    uint8_t send_buf_data[MAXLINE];
+    uint8_t recv_buf_data[MAXLINE];
     buffer send_buf;
     buffer recv_buf;
-    buffer_reset(&send_buf);
-    buffer_reset(&recv_buf);
+    buffer_init(&send_buf, sizeof(send_buf_data), send_buf_data);
+    buffer_init(&recv_buf, sizeof(recv_buf_data), recv_buf_data);
 
     char line[MAXLINE];
     printf("Type 'help' for available commands, 'exit' to quit.\n");
@@ -126,6 +129,7 @@ int main(void) {
         while (1) {
             size_t wcap;
             uint8_t *bufp = buffer_write_ptr(&recv_buf, &wcap);
+            LOG_INFO("Waiting for response, available space: %zu bytes\n", wcap);
             ssize_t nr = read(sock, bufp, wcap);
             if (nr <= 0) {
                 perror("read");
