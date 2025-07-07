@@ -248,15 +248,8 @@ void _closeConnection(struct selector_key *key)
 
     if (data->origin_resolution != NULL)
     {
-        if (data->client.request_parser.atyp != DOMAINNAME)
-        {
-            free(data->origin_resolution->ai_addr);
-            free(data->origin_resolution);
-        }
-        else
-        {
-            freeaddrinfo(data->origin_resolution);
-        }
+        freeaddrinfo(data->origin_resolution);
+        data->origin_resolution = NULL;
     }
     //if (data->dest_addr != NULL) {
     //    free(data->dest_addr);
