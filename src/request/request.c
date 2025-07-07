@@ -1,6 +1,6 @@
 #include "request.h"
 #include "request_parser.h"
-#include "../socks5.h"
+#include "../socks5/socks5.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -15,6 +15,7 @@
 #include <netdb.h>
 #include <sys/fcntl.h>
 #include "../logging/logger.h"
+#include "metrics.h"
 
 
 unsigned request_create_connection(struct selector_key *key);
@@ -284,6 +285,8 @@ unsigned request_read(struct selector_key *key) {
 
 
 
+    metrics_add_bytes(read_count);
+
     buffer_write_adv(&data->read_buffer, read_count);
     request_parse(&data->client.request_parser, &data->read_buffer);
     if (has_request_read_ended(&data->client.request_parser)) {
@@ -312,6 +315,7 @@ unsigned request_write(struct selector_key *key) {
         printf("request response send error\n");
         return ERROR;
     }
+    metrics_add_bytes(write_count);
     LOG_INFO("Request response sent!\n");
 
     buffer_read_adv(&data->write_buffer, write_count);

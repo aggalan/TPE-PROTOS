@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "../buffer.h"
+#include "../buffer/buffer.h"
 
 /**
  * @file negotiation_parser.h

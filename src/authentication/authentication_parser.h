@@ -1,7 +1,7 @@
 #ifndef AUTHENTICATION_PARSER_H
 #define AUTHENTICATION_PARSER_H
 
-#include "../buffer.h"
+#include "../buffer/buffer.h"
 #include <stdint.h>
 #include <stdbool.h>
 

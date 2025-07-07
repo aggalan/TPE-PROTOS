@@ -1,5 +1,6 @@
 #include "negotiation.h"
-#include "../socks5.h"
+#include "../socks5/socks5.h"
+#include "../metrics/metrics.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -31,6 +32,8 @@ unsigned negotiation_read(struct selector_key *key) {
         LOG_INFO("Client closed the connection");
         return ERROR;
     }
+    metrics_add_bytes(read_count);
+
     buffer_write_adv(&data->read_buffer, read_count);
     negotiation_parse(&data->client.negotiation_parser, &data->read_buffer);
     if (has_negotiation_read_ended(&data->client.negotiation_parser)) {
@@ -57,6 +60,8 @@ unsigned negotiation_write(struct selector_key *key) {
         printf("Greeting_write send error\n");
         return ERROR;
     }
+
+    metrics_add_bytes(write_count);
 
     LOG_INFO("Negotiation response sent!\n");
 

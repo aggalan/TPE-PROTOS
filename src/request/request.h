@@ -2,8 +2,8 @@
 #define REQUEST_H
 
 #include <stdint.h>
-#include "../buffer.h"
-#include "../selector.h"
+#include "../buffer/buffer.h"
+#include "../selector/selector.h"
 #include "request_parser.h"
 #include <sys/socket.h>
 #include <errno.h>

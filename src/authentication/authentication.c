@@ -1,6 +1,7 @@
 #include "authentication.h"
 #include "authentication_parser.h"
-#include "../socks5.h"
+#include "../socks5/socks5.h"
+#include "metrics.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -29,6 +30,8 @@ unsigned authentication_read(struct selector_key *key) {
         return ERROR;
     }
 
+    metrics_add_bytes(read_count);
+
     buffer_write_adv(&data->read_buffer, read_count);
     authentication_parse(&data->client.authentication_parser, &data->read_buffer);
     if (has_authentication_read_ended(&data->client.authentication_parser)) {
@@ -53,6 +56,7 @@ unsigned authentication_write(struct selector_key *key) {
         perror("authentication_write/send");
         return ERROR;
     }
+    metrics_add_bytes(n);
     buffer_read_adv(&data->write_buffer, n);
     LOG_INFO("Authentication response sent!\n");
     if (buffer_can_read(&data->write_buffer)) {

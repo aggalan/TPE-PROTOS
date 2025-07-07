@@ -1,47 +1,29 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.16)
 project(TPE_PROTOS C)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -std=gnu99 -g")
 
-include_directories(src)
-include_directories(src/negotiation)
+#
+# Collect all source files under src/, excluding unit tests ("*_test.c").
+# This mirrors the Makefile behaviour so the CMake build produces the same
+# executable.
+#
+file(GLOB_RECURSE ALL_SRCS "src/*.c")
+set(PROD_SRCS "")
+foreach(f ${ALL_SRCS})
+    if (NOT f MATCHES "_test\\.c$")
+        list(APPEND PROD_SRCS ${f})
+    endif()
+endforeach()
 
-add_executable(TPE_PROTOS
-        src/negotiation/negotiation.c
-        src/negotiation/negotiation.h
-        src/negotiation/negotiation_parser.c
-        src/negotiation/negotiation_parser.h
-        src/args.c
-        src/args.h
-        src/buffer.c
-        src/buffer.h
-        src/buffer_test.c
-        src/main.c
-        src/netutils.c
-        src/netutils.h
-        src/netutils_test.c
-        src/parser.c
-        src/parser.h
-        src/parser_test.c
-        src/parser_utils.c
-        src/parser_utils.h
-        src/parser_utils_test.c
-        src/selector.c
-        src/selector.h
-        src/selector_test.c
-        src/socks5.c
-        src/socks5.h
-        src/stm.c
-        src/stm.h
-        src/stm_test.c
-        src/tests.h
-        src/authentication/authentication.c
-        src/authentication/authentication.h
-        src/authentication/authentication_parser.c
-        src/authentication/authentication_parser.h
-        src/request/request.c
-        src/request/request_parser.c
-        src/request/request.h
-        src/request/request_parser.h
-        src/relay/relay.c
-        src/relay/relay.h)
+# Include every subdirectory in src so headers are found automatically.
+file(GLOB SUBDIRS LIST_DIRECTORIES true "src" "src/*")
+foreach(dir ${SUBDIRS})
+    if (IS_DIRECTORY ${dir})
+        include_directories(${dir})
+    endif()
+endforeach()
+
+add_executable(TPE_PROTOS ${PROD_SRCS})
+target_link_libraries(TPE_PROTOS pthread)

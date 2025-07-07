@@ -4,10 +4,10 @@
 
 #include <stdbool.h>
 #include <sys/types.h>
-#include "buffer.h"
-#include "socks5.h"
-#include "selector.h"
-#include "stm.h"
+#include "../buffer/buffer.h"
+#include "../socks5/socks5.h"
+#include "../selector/selector.h"
+#include "../stm/stm.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

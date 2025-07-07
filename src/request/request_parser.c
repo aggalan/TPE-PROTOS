@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-#include "socks5.h"
+#include "../socks5/socks5.h"
 #include "../logging/logger.h"
 
 void init_request_parser(ReqParser *p) {

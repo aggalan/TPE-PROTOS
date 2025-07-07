@@ -2,8 +2,8 @@
 #define TPE_PROTOS_GREETING_H
 
 #include <stdint.h>
-#include "../buffer.h"
-#include "../selector.h"
+#include "../buffer/buffer.h"
+#include "../selector/selector.h"
 #include "negotiation_parser.h"
 
 void negotiation_init (const unsigned state, struct selector_key *key);
