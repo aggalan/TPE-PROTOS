@@ -35,7 +35,7 @@ SUBDIRS      := $(shell find $(SRCDIR) -type d)
 INCLUDE_DIRS := $(addprefix -I,$(SUBDIRS))
 
 # ----------- Flags -----------------------------------------------------
-CFLAGS       := -Wall -Wextra -std=gnu99 -g $(INCLUDE_DIRS) -pthread $(CHECK_CFLAGS)
+CFLAGS       := -Wall -Wextra -std=gnu99 -g -DDEBUG $(INCLUDE_DIRS) -pthread $(CHECK_CFLAGS)
 LDFLAGS      := -pthread $(CHECK_LIBS)
 
 # ----------- Targets ---------------------------------------------------
