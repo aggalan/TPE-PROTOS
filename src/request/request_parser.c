@@ -15,7 +15,7 @@ void init_request_parser(ReqParser *p) {
 }
 
 ReqState request_parse(ReqParser* p, buffer* b) {
-    LOG_INFO("Starting request parse...\n");
+    LOG_DEBUG("Starting request parse...\n");
     if (p == NULL || b == NULL) return REQ_ERROR;
     while (buffer_can_read(b)) {
         uint8_t c = buffer_read(b);
@@ -132,7 +132,7 @@ ReqCodes fill_request_answer(ReqParser *p, buffer *buffer, struct selector_key *
 
     SocksClient *data = ATTACHMENT(key);
 
-    LOG_INFO("Filling request answer...\n");
+    LOG_DEBUG("Filling request answer...\n");
 
     buffer_write(buffer, 0x05);             // VER
     buffer_write(buffer, p->status);        // REP

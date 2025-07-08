@@ -29,7 +29,7 @@ void init_negotiation_parser(NegParser * parser) {
 }
 
 NegState negotiation_parse(NegParser * parser, buffer * buffer){
-    LOG_INFO("Stating negotiation parse\n");
+    LOG_DEBUG("Stating negotiation parse\n");
     if(parser == NULL || buffer == NULL) {
         return NEG_ERROR;
     }
@@ -40,7 +40,7 @@ NegState negotiation_parse(NegParser * parser, buffer * buffer){
 }
 // -- State handlers ----------------------------------------------------------
 NegState parse_version(NegParser * parser, uint8_t byte){
-    LOG_INFO("Parsed version: %d\n",byte);
+    LOG_DEBUG("Parsed version: %d\n",byte);
     if(byte!=SOCKS_VERSION){
         LOG_ERROR("parse_version: Client tried negotiating an invalid version.\n");
         return NEG_ERROR;
@@ -49,7 +49,7 @@ NegState parse_version(NegParser * parser, uint8_t byte){
 }
 
 NegState parse_method_count(NegParser * parser, uint8_t byte){
-    LOG_INFO("Number of methods parsed: %d\n",byte);
+    LOG_DEBUG("Number of methods parsed: %d\n",byte);
     parser->nmethods=byte;
     if(byte==0){
         return NEG_END;
@@ -59,7 +59,7 @@ NegState parse_method_count(NegParser * parser, uint8_t byte){
 }
 
 NegState parse_methods(NegParser * parser, uint8_t byte){
-    LOG_INFO("Method parsed: %d\n",byte);
+    LOG_DEBUG("Method parsed: %d\n",byte);
     if(byte==USER_PASS){
         parser->auth_method=byte;
     }
@@ -72,15 +72,15 @@ NegState parse_methods(NegParser * parser, uint8_t byte){
 
 NegState parse_end(NegParser * parser, uint8_t byte){
     if(byte==USER_PASS){
-        LOG_INFO("parse_method_count: Server accepts %d : USER_PASS authentication method\n",byte);
+        LOG_DEBUG("parse_method_count: Server accepts %d : USER_PASS authentication method\n",byte);
         parser->auth_method=byte;
     }
     else if(byte==NO_AUTH && parser->auth_method!=USER_PASS){
-        LOG_INFO("parse_method_count: Server accepts %d authentication method\n",byte);
+        LOG_DEBUG("parse_method_count: Server accepts %d authentication method\n",byte);
         parser->auth_method=byte;
     }
     parser->nmethods-=1;
-    LOG_INFO("parse_method_count: Server has %d authentication methods to go\n",parser->nmethods);
+    LOG_DEBUG("parse_method_count: Server has %d authentication methods to go\n",parser->nmethods);
     return parser->nmethods == 0 ? NEG_END : NEG_METHODS;
 }
 
@@ -102,7 +102,7 @@ bool has_negotiation_errors(NegParser * parser){
 NegCodes fill_negotiation_answer(NegParser * parser, buffer * buffer){
     if (!buffer_can_write(buffer))
         return NEG_FULL_BUFFER;
-    LOG_INFO("Filling negotiation answer...\n");
+    LOG_DEBUG("Filling negotiation answer...\n");
     buffer_write(buffer, SOCKS_VERSION);
     buffer_write(buffer, parser->auth_method);
     if (parser->auth_method == NO_METHOD)

@@ -24,18 +24,18 @@ unsigned request_error(SocksClient *data, struct selector_key *key, unsigned sta
 void* request_dns_resolve(void *data);
 
 void request_init(const unsigned state,struct selector_key * key) {
-    LOG_INFO("Creating request...\n");
+    LOG_DEBUG("Creating request...\n");
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
     }
     init_request_parser(&socks->client.request_parser);
-    LOG_INFO("All request elements created!\n");
+    LOG_DEBUG("All request elements created!\n");
 }
 
 unsigned request_setup(struct selector_key *key) {
     SocksClient *data = ATTACHMENT(key);
-    LOG_INFO("Setting up request...");
+    LOG_DEBUG("Setting up request...");
     ReqParser *parser = &data->client.request_parser;
     uint8_t atyp = parser->atyp;
 
@@ -49,7 +49,7 @@ unsigned request_setup(struct selector_key *key) {
 
     switch (atyp) {
         case IPV4: {
-            LOG_INFO("Setting up IPV4 destination");
+            LOG_DEBUG("Setting up IPV4 destination");
             struct sockaddr_in *addr4 = (struct sockaddr_in *)dest_addr;
             *addr4 = (struct sockaddr_in){
                 .sin_family = AF_INET,
@@ -72,11 +72,11 @@ unsigned request_setup(struct selector_key *key) {
             };
             char ipstr[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &addr4->sin_addr, ipstr, sizeof(ipstr));
-            LOG_INFO("IPV4 setup: [%s]:%d", ipstr, ntohs(addr4->sin_port));
+            LOG_DEBUG("IPV4 setup: [%s]:%d", ipstr, ntohs(addr4->sin_port));
             return request_create_connection(key);
         }
         case IPV6: {
-            LOG_INFO("Setting up IPV6 destination");
+            LOG_DEBUG("Setting up IPV6 destination");
             struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)dest_addr;
             *addr6 = (struct sockaddr_in6){
                 .sin6_family = AF_INET6,
@@ -99,11 +99,11 @@ unsigned request_setup(struct selector_key *key) {
             };
             char ipstr[INET6_ADDRSTRLEN];
             inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
-            LOG_INFO("IPV6 setup: [%s]:%d", ipstr, ntohs(addr6->sin6_port));
+            LOG_DEBUG("IPV6 setup: [%s]:%d", ipstr, ntohs(addr6->sin6_port));
             return request_create_connection(key);
         }
         case DOMAINNAME: {
-            LOG_INFO("Setting up DOMAINNAME resolution");
+            LOG_DEBUG("Setting up DOMAINNAME resolution");
             pthread_t dns_thread;
             struct selector_key *key_copy = malloc(sizeof(*key));
             if (!key_copy) {
@@ -143,7 +143,7 @@ unsigned request_setup(struct selector_key *key) {
 }
 
 void* request_dns_resolve(void *data) {
-    LOG_INFO("Resolving DNS...\n");
+    LOG_DEBUG("Resolving DNS...\n");
 
     struct selector_key *key = (struct selector_key *)data;
     SocksClient *socks = ATTACHMENT(key);
@@ -170,26 +170,26 @@ void* request_dns_resolve(void *data) {
     }
     selector_notify_block(key->s, key->fd);
 
-    LOG_INFO("DNS resolve done");
+    LOG_DEBUG("DNS resolve done");
     free(key);
     return NULL;
 }
 
 unsigned request_resolve_done(struct selector_key *key) {
-    LOG_INFO("[resolve done]:     Resolving request...\n");
+    LOG_DEBUG("[resolve done]:     Resolving request...\n");
     SocksClient *data = ATTACHMENT(key);
     if (data->origin_resolution == NULL) {
         LOG_ERROR("DNS resolution failed for %s:%d", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);
         return request_error(data, key, REQ_ERROR_HOST_UNREACHABLE);
     }
 
-    //LOG_INFO("DNS resolution successful for %s:%d", data->client.request_parser.dst_addr., data->client.request_parser.dst_port);
-    LOG_INFO("RESOLVED!!!");
+    //LOG_DEBUG("DNS resolution successful for %s:%d", data->client.request_parser.dst_addr., data->client.request_parser.dst_port);
+    LOG_DEBUG("RESOLVED!!!");
     return request_create_connection(key);
 }
 
 void request_connecting_init(const unsigned state,struct selector_key *key) {
-    LOG_INFO("Starting connection...\n");
+    LOG_DEBUG("Starting connection...\n");
 }
 
 unsigned request_connecting(struct selector_key *key) {
@@ -206,13 +206,13 @@ unsigned request_connecting(struct selector_key *key) {
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
 
-    LOG_INFO("The connection was established!\n");
+    LOG_DEBUG("The connection was established!\n");
     return REQUEST_WRITE;
 }
 
 unsigned request_create_connection(struct selector_key *key) {
     SocksClient * data = ATTACHMENT(key);
-    LOG_INFO("Creating socket\n");
+    LOG_DEBUG("Creating socket\n");
     data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | O_NONBLOCK, 0);
     if(data->origin_fd < 0){
         data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM, 0);
@@ -224,7 +224,7 @@ unsigned request_create_connection(struct selector_key *key) {
 
     selector_fd_set_nio(data->origin_fd);
 
-    LOG_INFO("Socket created!\n");
+    LOG_DEBUG("Socket created!\n");
 
     if(connect(data->origin_fd, data->origin_resolution->ai_addr, data->origin_resolution->ai_addrlen) == 0 || errno == EINPROGRESS){
         if (selector_register(key->s, data->origin_fd, get_fd_handler() , OP_WRITE, data) != SELECTOR_SUCCESS) {
@@ -237,7 +237,7 @@ unsigned request_create_connection(struct selector_key *key) {
             return ERROR;
         }
 
-        LOG_INFO("Attemping connection with Client Number %d\n",data->client_fd);
+        LOG_DEBUG("Attemping connection with Client Number %d\n",data->client_fd);
         return REQUEST_CONNECTING;
     }
 
@@ -265,7 +265,7 @@ unsigned request_error(SocksClient *data, struct selector_key *key, unsigned sta
 }
 
 unsigned request_read(struct selector_key *key) {
-    LOG_INFO("Starting request read...\n");
+    LOG_DEBUG("Starting request read...\n");
     SocksClient * data = ATTACHMENT(key);
 
     size_t read_size;
@@ -274,7 +274,7 @@ unsigned request_read(struct selector_key *key) {
     ssize_t read_count = recv(key->fd, read_buffer, read_size, 0);
 
     if (read_count == 0) {
-        LOG_INFO("Client closed the connection\n");
+        LOG_DEBUG("Client closed the connection\n");
         return DONE; // Client closed connection
     }
     if (read_count < 0) {
@@ -290,8 +290,8 @@ unsigned request_read(struct selector_key *key) {
     buffer_write_adv(&data->read_buffer, read_count);
     request_parse(&data->client.request_parser, &data->read_buffer);
     if (has_request_read_ended(&data->client.request_parser)) {
-        LOG_INFO("Parsed request successfully\n");
-        LOG_INFO("%s\n", request_to_string(&data->client.request_parser));
+        LOG_DEBUG("Parsed request successfully\n");
+        LOG_DEBUG("%s\n", request_to_string(&data->client.request_parser));
         if(!has_request_errors(&data->client.request_parser)) {
             return request_setup(key);
         }
@@ -305,7 +305,7 @@ unsigned request_read(struct selector_key *key) {
 }
 
 unsigned request_write(struct selector_key *key) {
-    LOG_INFO("Starting request response...\n");
+    LOG_DEBUG("Starting request response...\n");
     SocksClient* data = ATTACHMENT(key);
 
     size_t write_size;
@@ -316,7 +316,7 @@ unsigned request_write(struct selector_key *key) {
         return ERROR;
     }
     metrics_add_bytes(write_count);
-    LOG_INFO("Request response sent!\n");
+    LOG_DEBUG("Request response sent!\n");
 
     buffer_read_adv(&data->write_buffer, write_count);
 
@@ -340,7 +340,7 @@ unsigned request_write(struct selector_key *key) {
         return ERROR;
     }
 
-    LOG_INFO("Request ended, transitioning to RELAY");
+    LOG_DEBUG("Request ended, transitioning to RELAY");
     return RELAY;
 }
 

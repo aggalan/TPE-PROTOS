@@ -2,7 +2,7 @@
 #include "../metrics/metrics.h"
 
 void relay_init(const unsigned state, struct selector_key *key) {
-    LOG_INFO("Creating relay...\n");
+    LOG_DEBUG("Creating relay...\n");
 
     buffer_reset(&ATTACHMENT(key)->read_buffer);
     buffer_reset(&ATTACHMENT(key)->write_buffer);
@@ -21,12 +21,12 @@ void relay_init(const unsigned state, struct selector_key *key) {
     data->duplex = OP_READ | OP_WRITE;
     data->other = &ATTACHMENT(key)->client.relay;
     if (ATTACHMENT(key)->origin_fd != -1) {
-        LOG_INFO("relay_init: File Descripttor IS valid!");
+        LOG_DEBUG("relay_init: File Descripttor IS valid!");
         selector_set_interest(key->s, ATTACHMENT(key)->origin_fd, OP_READ);
     }
-    LOG_INFO("All relay elements created!\n");
-    LOG_INFO("Client fd: %d, Origin fd: %d\n", ATTACHMENT(key)->client_fd, ATTACHMENT(key)->origin_fd);
-    LOG_INFO("Relaying...\n");
+    LOG_DEBUG("All relay elements created!\n");
+    LOG_DEBUG("Client fd: %d, Origin fd: %d\n", ATTACHMENT(key)->client_fd, ATTACHMENT(key)->origin_fd);
+    LOG_DEBUG("Relaying...\n");
 }
 
 static fd_interest copy_compute_interests(fd_selector s, struct relay *d) {
@@ -39,7 +39,7 @@ static fd_interest copy_compute_interests(fd_selector s, struct relay *d) {
         if ((d->duplex & OP_WRITE) && buffer_can_read(d->wb)) {
             ret |= OP_WRITE;
         }
-        LOG_INFO("Setting interests for fd %d: duplex=0x%x, can_write_rb=%d, can_read_wb=%d, ret=0x%x\n",
+        LOG_DEBUG("Setting interests for fd %d: duplex=0x%x, can_write_rb=%d, can_read_wb=%d, ret=0x%x\n",
                 *d->fd, d->duplex, buffer_can_write(d->rb), buffer_can_read(d->wb), ret);
         if (SELECTOR_SUCCESS != selector_set_interest(s, *d->fd, ret)) {
             abort();
@@ -57,16 +57,16 @@ unsigned relay_read(struct selector_key *key) {
     buffer *b = data->rb;
     unsigned ret = RELAY;
 
-    LOG_INFO("relay_read called for fd %d, buffer can_write: %d\n", key->fd, buffer_can_write(b));
+    LOG_DEBUG("relay_read called for fd %d, buffer can_write: %d\n", key->fd, buffer_can_write(b));
 
     uint8_t *ptr = buffer_write_ptr(b, &size);
-    LOG_INFO("relay_read: Available buffer space: %zu bytes\n", size);
+    LOG_DEBUG("relay_read: Available buffer space: %zu bytes\n", size);
 
     n = recv(key->fd, ptr, size, 0);
-    LOG_INFO("relay_read: recv returned %zd\n", n);
+    LOG_DEBUG("relay_read: recv returned %zd\n", n);
 
     if (n == 0) {
-        LOG_INFO("Connection closed by peer on fd %d.\n", key->fd);
+        LOG_DEBUG("Connection closed by peer on fd %d.\n", key->fd);
         shutdown(*data->fd, SHUT_RD);
         data->duplex &= ~OP_READ;
         if (*data->other->fd != -1) {
@@ -76,7 +76,7 @@ unsigned relay_read(struct selector_key *key) {
     } else {
         buffer_write_adv(b, n);
         metrics_add_bytes(n);
-        LOG_INFO("relay_read: Read %zd bytes from fd %d\n", n, key->fd);
+        LOG_DEBUG("relay_read: Read %zd bytes from fd %d\n", n, key->fd);
     }
 
     copy_compute_interests(key->s, data);

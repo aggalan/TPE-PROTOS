@@ -31,7 +31,7 @@
 static bool done = false;
 
 static void sigterm_handler(const int signal) {
-    printf("signal %d, cleaning up and exiting\n", signal);
+    LOG_INFO("signal %d, cleaning up and exiting\n", signal);
     done = true;
 }
 
@@ -68,7 +68,7 @@ int main(const int argc, const char** argv) {
 
     struct socks5args args;
     parse_args(argc, (char**)argv, &args);
-    printf("Proxy SOCKS en %s:%hu, Management en %s:%hu\n",
+    LOG_INFO("Proxy SOCKS en %s:%hu, Management en %s:%hu\n",
            args.socks_addr, args.socks_port,
            args.mng_addr,    args.mng_port);
 
@@ -94,7 +94,6 @@ int main(const int argc, const char** argv) {
         perror("bind/listen SOCKS");
         return 1;
     }
-    LOG_INFO("Listening SOCKS on %s:%hu\n", args.socks_addr, args.socks_port);
     const struct fd_handler socksv5 = {
             .handle_read  = socksv5_passive_accept,
             .handle_write = NULL,
@@ -109,7 +108,6 @@ int main(const int argc, const char** argv) {
         perror("bind/listen management");
         return 1;
     }
-    LOG_INFO("Listening management on %s:%hu\n", args.mng_addr, args.mng_port);
     const struct fd_handler management_handler = {
             .handle_read  = mgmt_accept,
             .handle_write = NULL,

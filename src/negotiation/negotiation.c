@@ -7,18 +7,18 @@
 
 
 void negotiation_init(const unsigned state,struct selector_key *key) {
-    LOG_INFO("Creating negotiation...\n");
+    LOG_DEBUG("Creating negotiation...\n");
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
     }
     init_negotiation_parser(&socks->client.negotiation_parser);
-    LOG_INFO("All negotiation elements created!\n");
+    LOG_DEBUG("All negotiation elements created!\n");
 
 }
 
 unsigned negotiation_read(struct selector_key *key) {
-    LOG_INFO("Started reading negotiation...\n");
+    LOG_DEBUG("Started reading negotiation...\n");
     SocksClient * data = ATTACHMENT(key);
 
     size_t read_size;
@@ -29,7 +29,7 @@ unsigned negotiation_read(struct selector_key *key) {
         LOG_ERROR("recv error: %s", strerror(errno));
         return ERROR;
     } if (read_count == 0) {
-        LOG_INFO("Client closed the connection");
+        LOG_DEBUG("Client closed the connection");
         return ERROR;
     }
     metrics_add_bytes(read_count);
@@ -41,14 +41,14 @@ unsigned negotiation_read(struct selector_key *key) {
             printf("No methods allowed or selector error\n");
             return ERROR;
         }
-        LOG_INFO("Negotiation parsed successfully\n");
+        LOG_DEBUG("Negotiation parsed successfully\n");
         return NEGOTIATION_WRITE;
     }
     return NEGOTIATION_READ;
 }
 
 unsigned negotiation_write(struct selector_key *key) {
-    LOG_INFO("Starting negotiation response...\n");
+    LOG_DEBUG("Starting negotiation response...\n");
     SocksClient* data = ATTACHMENT(key);
 
     size_t write_size;
@@ -63,7 +63,7 @@ unsigned negotiation_write(struct selector_key *key) {
 
     metrics_add_bytes(write_count);
 
-    LOG_INFO("Negotiation response sent!\n");
+    LOG_DEBUG("Negotiation response sent!\n");
 
     buffer_read_adv(&data->write_buffer, write_count);
 
@@ -75,16 +75,15 @@ unsigned negotiation_write(struct selector_key *key) {
         return ERROR;
     }
 
-    LOG_INFO("Negotiation ended\n");
+    LOG_DEBUG("Negotiation ended\n");
 
     if (USER_PASS == data->client.negotiation_parser.auth_method) {
-        LOG_INFO("User has selected USER_PASS authentication\n");
+        LOG_DEBUG("User has selected USER_PASS authentication\n");
         return AUTHENTICATION_READ;
     }
 
-    LOG_INFO("User has selected NO_AUTH authentication\n");
+    LOG_DEBUG("User has selected NO_AUTH authentication\n");
 
-    //return REQUEST_READ
     return REQUEST_READ;
 }
 

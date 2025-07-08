@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
         while (1) {
             size_t wcap;
             uint8_t *bufp = buffer_write_ptr(&recv_buf, &wcap);
-            LOG_INFO("Waiting for response, available space: %zu bytes\n", wcap);
+            LOG_DEBUG("Waiting for response, available space: %zu bytes\n", wcap);
             ssize_t nr = read(sock, bufp, wcap);
             if (nr <= 0) {
                 perror("read");

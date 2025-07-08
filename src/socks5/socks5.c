@@ -140,7 +140,7 @@ fail:
 
 
 void socksv5_passive_accept(struct selector_key *key){
-    LOG_INFO("New connection received\n");
+    LOG_DEBUG("New connection received\n");
     struct sockaddr_storage client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
     struct socks5 *state = NULL;
@@ -162,7 +162,7 @@ void socksv5_passive_accept(struct selector_key *key){
         goto fail;
     }
     state = socks5_new(client, &client_addr, client_addr_len);
-    LOG_INFO("Accepted new connection!\n");
+    LOG_DEBUG("Accepted new connection!\n");
     if (state == NULL)
     {
         goto fail;
@@ -262,7 +262,7 @@ void _closeConnection(struct selector_key *key)
 
 void socksv5_done(const unsigned state, struct selector_key * key)
 {
-    LOG_INFO("Socks DONE...\n");
+    LOG_DEBUG("Socks DONE...\n");
     const int fds[] = {
         ATTACHMENT(key)->client_fd,
         ATTACHMENT(key)->origin_fd,
