@@ -27,6 +27,7 @@ void relay_init(const unsigned state, struct selector_key *key) {
     LOG_DEBUG("All relay elements created!\n");
     LOG_DEBUG("Client fd: %d, Origin fd: %d\n", ATTACHMENT(key)->client_fd, ATTACHMENT(key)->origin_fd);
     LOG_DEBUG("Relaying...\n");
+    LOG_INFO("RELAYING...\n");
 }
 
 static fd_interest copy_compute_interests(fd_selector s, struct relay *d) {

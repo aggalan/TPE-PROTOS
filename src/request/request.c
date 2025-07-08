@@ -203,7 +203,7 @@ unsigned request_connecting(struct selector_key *key) {
         LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
-
+    LOG_INFO("CONNECTING...\n");
     LOG_DEBUG("The connection was established!\n");
     return REQUEST_WRITE;
 }
