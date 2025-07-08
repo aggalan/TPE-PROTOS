@@ -167,7 +167,7 @@ void socksv5_passive_accept(struct selector_key *key){
     {
         goto fail;
     }
-    metrics_connection_opened();
+    metrics_new_connection();
 
     if (SELECTOR_SUCCESS != selector_register(key->s, client, &socks5_handler,OP_READ, state))
     {
@@ -231,7 +231,6 @@ void _closeConnection(struct selector_key *key)
     if (data->closed) return;
 
     data->closed = true;
-    metrics_connection_closed();
     printf("Socks client %d disconected",key->fd);
 
     int clientSocket = data->client_fd;
@@ -264,12 +263,11 @@ void _closeConnection(struct selector_key *key)
 void socksv5_done(const unsigned state, struct selector_key * key)
 {
     LOG_INFO("Socks DONE...\n");
-    log_metrics();
-    metrics_connection_closed();
     const int fds[] = {
         ATTACHMENT(key)->client_fd,
         ATTACHMENT(key)->origin_fd,
     };
+    metrics_closed_connection();
     for (unsigned i = 0; i < N(fds); i++)
     {
         if (fds[i] != -1)
@@ -285,6 +283,6 @@ void socksv5_done(const unsigned state, struct selector_key * key)
 
 void socksv5_error(const unsigned state, struct selector_key * key){
     LOG_ERROR("Socks error\n");
-    metrics_connection_closed();
+    metrics_closed_connection();
 //    ATTACHMENT(key)->closed = true;
 }

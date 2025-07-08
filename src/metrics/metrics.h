@@ -4,17 +4,16 @@
 #include <stddef.h>
 
 struct metrics {
-    unsigned long total_connections;
+    unsigned long historic_connections;
     unsigned long bytes_transferred;
     unsigned      concurrent_connections;
+
 };
 
 void metrics_init(void);
-void metrics_connection_opened(void);
-void metrics_connection_closed(void);
-void metrics_add_bytes(size_t n);
-struct metrics metrics_get(void);
+void metrics_new_connection(void);
+void metrics_closed_connection(void);
+void metrics_add_bytes(size_t amount);
 char * metrics_to_string(void);
-void log_metrics();
 
 #endif // METRICS_H
