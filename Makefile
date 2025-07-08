@@ -27,15 +27,24 @@ TEST_OBJS    := $(TEST_SRCS:.c=.o)
 # Objects used to build the main proxy executable
 MAIN_OBJS    := $(PROD_OBJS)
 
-# Admin client specific objects
-ADMIN_CLIENT_OBJS := $(ADMIN_CLIENT_SRC:.c=.o) $(SRCDIR)/buffer/buffer.o
+# Admin client specific objects -----------------------------------------
+#   – COMMON_OBJS: everything the proxy uses **except** src/main.o
+COMMON_OBJS  := $(filter-out $(SRCDIR)/main.o $(ADMIN_CLIENT_SRC:.c=.o),$(PROD_OBJS))
+ADMIN_CLIENT_OBJS := $(COMMON_OBJS) $(ADMIN_CLIENT_SRC:.c=.o)
 
 # Collect every directory under src and turn each into a -I flag
 SUBDIRS      := $(shell find $(SRCDIR) -type d)
 INCLUDE_DIRS := $(addprefix -I,$(SUBDIRS))
 
 # ----------- Flags -----------------------------------------------------
-CFLAGS       := -Wall -Wextra -std=gnu99 -g -DDEBUG $(INCLUDE_DIRS) -pthread $(CHECK_CFLAGS)
+# Optional DEBUG build: pass DEBUG=1 (or any non-empty value) to enable
+ifeq ($(strip $(DEBUG)),)
+  DEBUG_FLAGS :=
+else
+  DEBUG_FLAGS := -DDEBUG -g
+endif
+
+CFLAGS       := -Wall -Wextra -std=gnu99 $(DEBUG_FLAGS) $(INCLUDE_DIRS) -pthread $(CHECK_CFLAGS)
 LDFLAGS      := -pthread $(CHECK_LIBS)
 
 # ----------- Targets ---------------------------------------------------
@@ -55,7 +64,7 @@ $(TARGET): $(MAIN_OBJS)
 $(TEST_TARGET): $(MAIN_OBJS) $(TEST_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-# Admin management client -----------------------------------------------
+# Admin management client ----------------------------------------------
 $(ADMIN_TARGET): $(ADMIN_CLIENT_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
@@ -63,7 +72,7 @@ $(ADMIN_TARGET): $(ADMIN_CLIENT_OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Run tests (rebuilds test_runner if needed) ----------------------------
+# Run tests -------------------------------------------------------------
 test: $(TEST_TARGET)
 	./$(TEST_TARGET)
 
