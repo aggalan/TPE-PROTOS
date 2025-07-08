@@ -85,6 +85,6 @@ bool has_request_read_ended(ReqParser * p);
 
 bool has_request_errors(ReqParser * p);
 
-ReqCodes fill_request_answer(ReqParser * p, buffer* buffer);
+ReqCodes fill_request_answer(ReqParser * p, buffer* buffer, struct selector_key * key);
 
 #endif //REQUEST_PARSER_H
