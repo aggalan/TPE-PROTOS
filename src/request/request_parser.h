@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "selector.h"
+#include "../selector/selector.h"
 #define METHOD_SIZE 255
 #define SOCKS_VERSION 0x05
 #define PORT_BYTE_LENGHT 2
@@ -85,6 +85,6 @@ bool has_request_read_ended(ReqParser * p);
 
 bool has_request_errors(ReqParser * p);
 
-ReqCodes fill_request_answer(ReqParser * p, buffer* buffer, struct selector_key *key);
+ReqCodes fill_request_answer(ReqParser * p, buffer* buffer);
 
 #endif //REQUEST_PARSER_H

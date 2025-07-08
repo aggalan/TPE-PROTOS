@@ -62,7 +62,6 @@ static int setup_listener(const char* addr, unsigned short port) {
 
 int main(const int argc, const char** argv) {
     logger_init();
-    logger_parse_args(argc, (char**)argv);
     metrics_init();
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
