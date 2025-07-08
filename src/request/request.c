@@ -162,10 +162,11 @@ void* request_dns_resolve(void *data) {
 
     char service[7];
     sprintf(service, "%d", (int)socks->client.request_parser.dst_port);
-    printf("Resolving %s:%s\n", socks->client.request_parser.dst_addr.domainname, service);
+    LOG_DEBUG("Resolving %s:%s\n", socks->client.request_parser.dst_addr.domainname, service);
     int err = getaddrinfo((char *)socks->client.request_parser.dst_addr.domainname, service, &hints, &socks->origin_resolution);
-    printf("ERROR: %d\n", err);
+    LOG_DEBUG("ERROR: %d\n", err);
     if (err != 0) {
+        LOG_ERROR("DNS resolution failed for %s:%d: %s", socks->client.request_parser.dst_addr.domainname, socks->client.request_parser.dst_port, gai_strerror(err));
         socks->origin_resolution = NULL;
     }
     selector_notify_block(key->s, key->fd);

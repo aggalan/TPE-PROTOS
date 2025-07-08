@@ -26,7 +26,7 @@ unsigned authentication_read(struct selector_key *key) {
     uint8_t *read_buffer = buffer_write_ptr(&data->read_buffer, &read_size);
     ssize_t read_count = recv(key->fd, read_buffer, read_size, 0);
     if (read_count <= 0) {
-        printf("Authentication_read read error\n");
+        LOG_ERROR("Authentication_read read error\n");
         return ERROR;
     }
 
