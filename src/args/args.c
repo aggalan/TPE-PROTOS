@@ -94,14 +94,11 @@ parse_args(const int argc, char** argv, struct socks5args* args)
             {0, 0, 0, 0}
         };
 
-        c = getopt_long(argc, argv,"dhl:L:Np:P:u:v",long_options, &option_index);        if (c == -1)
+        c = getopt_long(argc, argv,"hl:L:Np:P:u:v",long_options, &option_index);        if (c == -1)
             break;
 
         switch (c)
-        {case 'd':
-            logger_set_debug(1);
-            break;
-        case 'h':
+        {case 'h':
             usage(argv[0]);
             break;
         case 'l':

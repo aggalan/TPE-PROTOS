@@ -180,12 +180,9 @@ unsigned request_resolve_done(struct selector_key *key) {
     LOG_DEBUG("[resolve done]:     Resolving request...\n");
     SocksClient *data = ATTACHMENT(key);
     if (data->origin_resolution == NULL) {
-        LOG_ERROR("DNS resolution failed for %s:%d", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);
         return request_error(data, key, REQ_ERROR_HOST_UNREACHABLE);
     }
 
-    //LOG_DEBUG("DNS resolution successful for %s:%d", data->client.request_parser.dst_addr., data->client.request_parser.dst_port);
-    LOG_DEBUG("RESOLVED!!!");
     return request_create_connection(key);
 }
 

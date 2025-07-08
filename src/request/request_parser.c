@@ -141,7 +141,7 @@ ReqCodes fill_request_answer(ReqParser *p, buffer *buffer, struct selector_key *
     // Ahora elegimos qué tipo de dirección mandamos
     ReqAtyp response_type = p->atyp;
 
-    if (response_type == DOMAINNAME) {
+    if (response_type == DOMAINNAME && p->status == REQ_SUCCEDED ) {
         if (data->origin_resolution->ai_family == AF_INET)
             response_type = IPV4;
         else response_type = IPV6;
