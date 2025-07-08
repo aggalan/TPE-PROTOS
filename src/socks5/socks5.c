@@ -231,7 +231,7 @@ void _closeConnection(struct selector_key *key)
     if (data->closed) return;
 
     data->closed = true;
-    printf("Socks client %d disconected",key->fd);
+    LOG_DEBUG("Socks client %d disconected",key->fd);
 
     int clientSocket = data->client_fd;
     int serverSocket = data->origin_fd;
