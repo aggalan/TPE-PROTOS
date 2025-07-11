@@ -37,7 +37,7 @@ static bool verify_credentials(const char *user, const char *pass) {
     char fpass[PASSWORD_MAX_LEN + 1];
 
     while (fscanf(f, " %15s %15s", fuser, fpass) == 2) {
-    LOG_INFO("USERNAME: %s PASSWORD: %s\n",fuser, fpass);
+    LOG_DEBUG("USERNAME: %s PASSWORD: %s\n",fuser, fpass);
         if (strcmp(user, fuser) == 0 && strcmp(pass, fpass) == 0) {
             fclose(f);
             return true;
@@ -97,7 +97,7 @@ AuthState parse_username(AuthParser * parser, uint8_t byte){
 }
 
 AuthState parse_password_length(AuthParser * parser, uint8_t byte){
-    LOG_INFO("Parsed password length: %d \n",byte);
+    LOG_DEBUG("Parsed password length: %d \n",byte);
     if(byte==0){
         return AUTH_END;
     }
@@ -120,15 +120,17 @@ AuthState parse_password(AuthParser * parser, uint8_t byte){
 
 AuthState parse_end(AuthParser * parser, uint8_t byte){
     LOG_DEBUG("parse_end: Authentification has ended. \n");
-    LOG_INFO("Received byte: %d\n", byte);
+    LOG_DEBUG("Received byte: %d\n", byte);
     LOG_DEBUG("Parser state: %d\n", parser->state);
-    return parser != NULL && parser->state == AUTH_END;
+    return parser != NULL && parser->state == AUTH_END && byte==0;
 }
 
 AuthState parse_error(AuthParser * parser, uint8_t byte){
     LOG_DEBUG("parse_error: Error in Authentification. \n");
     LOG_DEBUG("Received byte: %d\n", byte);
     LOG_DEBUG("Parser state: %d\n", parser->state);
+    byte = byte; //@TODO: Cambiar cuando se haga Error Handling
+    if(parser == NULL) LOG_ERROR("parse_error: Parser is NULL\n");
     return AUTH_ERROR;
     //IDK
 }

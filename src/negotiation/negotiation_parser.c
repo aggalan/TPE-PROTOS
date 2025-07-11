@@ -39,7 +39,7 @@ NegState negotiation_parse(NegParser * parser, buffer * buffer){
             break;
         }
     }
-    return parser->state;
+    return parser->state==NEG_END ? parse_end(parser,0):parser->state;
 }
 
 // -- State handlers ----------------------------------------------------------
@@ -89,7 +89,7 @@ NegState parse_end(NegParser * parser, uint8_t byte){
     LOG_DEBUG("parse_end: Unexpected byte %d received in END state\n", byte);
     // END state should not process additional bytes
     // This might indicate a protocol violation or buffer issue
-    return NEG_ERROR;
+    return parser != NULL  && parser->state == NEG_END && byte==0;;
 }
 
 // -- Boolean Functions ----------------------------------------------------------

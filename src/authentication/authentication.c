@@ -8,21 +8,20 @@
 
 
 void authentication_init(const unsigned state, struct selector_key *key) {
-    LOG_INFO("BEEEP BOOOP STARTING");
     if(state!=(unsigned int)0 && state!=(unsigned int)2 ){
         LOG_ERROR("[Authentication]: Initiated with an invalid state: %u\n", state);
         return;
     }    
-    LOG_INFO("Creating authentication...\n");
+    LOG_DEBUG("Creating authentication...\n");
     SocksClient *socks = ATTACHMENT(key);    if (socks == NULL) {
         return;
     }
     init_authentication_parser(&socks->client.authentication_parser);
-    LOG_INFO("All authentication elements created!\n");
+    LOG_DEBUG("All authentication elements created!\n");
 }
 
 unsigned authentication_read(struct selector_key *key) {
-    LOG_INFO("Starting authentication read...\n");
+    LOG_DEBUG("Starting authentication read...\n");
     SocksClient *data = ATTACHMENT(key);
 
     size_t read_size;
@@ -43,14 +42,14 @@ unsigned authentication_read(struct selector_key *key) {
             LOG_ERROR("Authentication_read selector_set_interest_key failed\n");
             return ERROR;
         }
-        LOG_INFO("Parsed authentication successfully\n");
+        LOG_DEBUG("Parsed authentication successfully\n");
         return AUTHENTICATION_WRITE;
     }
     return AUTHENTICATION_READ;
 }
 
 unsigned authentication_write(struct selector_key *key) {
-    LOG_INFO("Starting authentication response...\n");
+    LOG_DEBUG("Starting authentication response...\n");
     SocksClient *data = ATTACHMENT(key);
 
     size_t   write_size;
@@ -63,12 +62,12 @@ unsigned authentication_write(struct selector_key *key) {
     }
     metrics_add_bytes(n);
     buffer_read_adv(&data->write_buffer, n);
-    LOG_INFO("Authentication response sent!\n");
+    LOG_DEBUG("Authentication response sent!\n");
     if (buffer_can_read(&data->write_buffer)) {
         return AUTHENTICATION_WRITE;
     }
 
     selector_set_interest_key(key, OP_READ);
-    LOG_INFO("Authentication has ended\n");
+    LOG_DEBUG("Authentication has ended\n");
     return REQUEST_READ;
 }
