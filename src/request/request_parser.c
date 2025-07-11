@@ -64,7 +64,7 @@ ReqState request_parse(ReqParser* p, buffer* b) {
                 break;
 
             case REQ_DNLEN:
-                if (c == 0 || c > REQ_MAX_DN_LENGHT) {
+                if (c == 0) {
                     p->state = REQ_ERROR;
                     return p->state;
                 }
@@ -167,7 +167,7 @@ ReqCodes fill_request_answer(ReqParser *p, buffer *buffer, struct selector_key *
 
         default:
             LOG_ERROR("Unsupported ATYP %d in fill_request_answer", response_type);
-            return REQ_ERROR_GENERAL_FAILURE;
+            return REQ_UNSUPORTED_ATYP;
     }
 
     buffer_write(buffer, 0x00);
