@@ -7,7 +7,10 @@
 
 
 void negotiation_init(const unsigned state,struct selector_key *key) {
-    if(state==NULL) return;
+    if(state!=(unsigned int)0){
+        LOG_ERROR("[Negotiation] Initiated with an invalid state: %u\n", state);
+        return;
+    }
     LOG_DEBUG("Creating negotiation...\n");
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
