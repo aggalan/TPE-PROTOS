@@ -60,11 +60,16 @@ AuthState authentication_parse(AuthParser *parser, buffer *buffer) {
     while(buffer_can_read(buffer) && parser->state != AUTH_END) {
         parser->state=parse_functions[parser->state](parser,buffer_read(buffer));
     }
-    return parser->state;
+    return parser->state==AUTH_END ? parse_end(parser,0):parser->state;
 }
 
 AuthState parse_version(AuthParser * parser, uint8_t byte){
+    if(parser->state!=(unsigned int)0 && parser->state!=(unsigned int)2 ){
+        LOG_ERROR("[Authentication]: parse_version Initiated with an invalid state: %u\n", parser->state);
+        return AUTH_ERROR;
+    }  
     LOG_DEBUG("Version parsed: %d\n",byte);
+    LOG_DEBUG("Expected version: %d\n", AUTH_VERSION_USER_PASS);
     if(byte != AUTH_VERSION_USER_PASS){
         LOG_ERROR("parse_version: Oof! Ouch! Version %d is invalid :/\n",byte);
         return AUTH_ERROR;
@@ -115,11 +120,17 @@ AuthState parse_password(AuthParser * parser, uint8_t byte){
 
 AuthState parse_end(AuthParser * parser, uint8_t byte){
     LOG_DEBUG("parse_end: Authentification has ended. \n");
-    return parser != NULL && parser->state == AUTH_END;
+    LOG_DEBUG("Received byte: %d\n", byte);
+    LOG_DEBUG("Parser state: %d\n", parser->state);
+    return parser != NULL && parser->state == AUTH_END && byte==0;
 }
 
 AuthState parse_error(AuthParser * parser, uint8_t byte){
     LOG_DEBUG("parse_error: Error in Authentification. \n");
+    LOG_DEBUG("Received byte: %d\n", byte);
+    LOG_DEBUG("Parser state: %d\n", parser->state);
+    byte = byte; //@TODO: Cambiar cuando se haga Error Handling
+    if(parser == NULL) LOG_ERROR("parse_error: Parser is NULL\n");
     return AUTH_ERROR;
     //IDK
 }

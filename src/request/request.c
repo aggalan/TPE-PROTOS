@@ -24,6 +24,10 @@ unsigned request_error(SocksClient *data, struct selector_key *key, unsigned sta
 void* request_dns_resolve(void *data);
 
 void request_init(const unsigned state,struct selector_key * key) {
+    if(state != REQUEST_READ) {
+        LOG_ERROR("Request initialized with an invalid state: %u\n", state);
+        return;
+    }
     LOG_DEBUG("Creating request...\n");
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
@@ -188,6 +192,14 @@ unsigned request_resolve_done(struct selector_key *key) {
 
 void request_connecting_init(const unsigned state,struct selector_key *key) {
     LOG_DEBUG("Starting connection...\n");
+    if(key == NULL) {
+        LOG_ERROR("Key is NULL in request_connecting_init\n");
+        return;
+    }
+    if(state!=REQUEST_CONNECTING && state!=REQUEST_RESOLVE) {
+        LOG_ERROR("Request connecting initialized with an invalid state: %u\n", state);
+        return;
+    }
 }
 
 unsigned request_connecting(struct selector_key *key) {

@@ -8,9 +8,12 @@
 
 
 void authentication_init(const unsigned state, struct selector_key *key) {
+    if(state!=AUTHENTICATION_READ ){
+        LOG_ERROR("[Authentication]: Initiated with an invalid state: %u\n", state);
+        return;
+    }    
     LOG_DEBUG("Creating authentication...\n");
-    SocksClient *socks = ATTACHMENT(key);
-    if (socks == NULL) {
+    SocksClient *socks = ATTACHMENT(key);    if (socks == NULL) {
         return;
     }
     init_authentication_parser(&socks->client.authentication_parser);

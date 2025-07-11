@@ -60,6 +60,7 @@ selector_error(const selector_status status) {
 
 static void
 wake_handler(const int signal) {
+    if(signal<0) return; // evitamos el warning de unused parameter
     // nada que hacer. está solo para interrumpir el select
 }
 
