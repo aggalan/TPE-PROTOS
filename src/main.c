@@ -87,12 +87,11 @@ int main(const int argc, const char** argv) {
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
-    struct socks5args args;
-    parse_args(argc, (char**)argv, &args);
+    parse_args(argc, (char**)argv, &socks5args);
     LOG_INFO("Proxy SOCKS en %s:%hu, Management en %s:%hu\n",
-           args.socks_addr, args.socks_port,
-           args.mng_addr,    args.mng_port);
-    args.authentication_enabled = true;
+             socks5args.socks_addr, socks5args.socks_port,
+             socks5args.mng_addr,    socks5args.mng_port);
+    socks5args.authentication_enabled = true;
     signal(SIGTERM, sigterm_handler);
     signal(SIGINT,  sigterm_handler);
 
@@ -110,7 +109,7 @@ int main(const int argc, const char** argv) {
         return 1;
     }
 
-    int socks_sock = setup_listener(args.socks_addr, args.socks_port);
+    int socks_sock = setup_listener(socks5args.socks_addr, socks5args.socks_port);
     if (socks_sock < 0) {
         perror("bind/listen SOCKS");
         return 1;
@@ -124,7 +123,7 @@ int main(const int argc, const char** argv) {
 
 
 
-    int mng_sock = setup_udp_listener(args.mng_addr, args.mng_port);
+    int mng_sock = setup_udp_listener(socks5args.mng_addr, socks5args.mng_port);
     if (mng_sock < 0) {
         perror("bind/listen management");
         return 1;

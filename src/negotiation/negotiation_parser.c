@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "../logging/logger.h"
+#include "args.h"
 
 
 static const uint8_t SOCKS_VERSION = 0x05;
@@ -19,7 +20,6 @@ parse_character parse_functions[] = {
     [NEG_ERROR] = (parse_character) parse_end // Error state does not require parsing
 };
 
-// -- Public API --------------------------------------------------------------
 void init_negotiation_parser(NegParser * parser) {
     if(parser == NULL) return;
     parser->state = NEG_VERSION;
@@ -38,7 +38,6 @@ NegState negotiation_parse(NegParser * parser, buffer * buffer){
     }
     return parser->state;
 }
-// -- State handlers ----------------------------------------------------------
 NegState parse_version(NegParser * parser, uint8_t byte){
     LOG_DEBUG("Parsed version: %d\n",byte);
     if(byte!=SOCKS_VERSION){
@@ -63,7 +62,7 @@ NegState parse_methods(NegParser * parser, uint8_t byte){
     if(byte==USER_PASS){
         parser->auth_method=byte;
     }
-    else if(byte==NO_AUTH && parser->auth_method!=USER_PASS){
+    else if(byte==NO_AUTH && parser->auth_method!=USER_PASS && !socks5args.authentication_enabled){
         parser->auth_method=byte;
     }
     parser->nmethods-=1;
@@ -84,7 +83,7 @@ NegState parse_end(NegParser * parser, uint8_t byte){
     return parser->nmethods == 0 ? NEG_END : NEG_METHODS;
 }
 
-// -- Boolean Functions ----------------------------------------------------------
+
 
 bool has_negotiation_read_ended(NegParser * parser){
     if(parser == NULL) return false;
@@ -96,8 +95,6 @@ bool has_negotiation_errors(NegParser * parser){
     if(parser == NULL) return false;
     return parser->state == NEG_ERROR;
 }
-
-// -- NegCodes Functions ----------------------------------------------------------
 
 NegCodes fill_negotiation_answer(NegParser * parser, buffer * buffer){
     if (!buffer_can_write(buffer))

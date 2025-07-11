@@ -24,6 +24,7 @@ struct socks5args
 
     struct users users[MAX_USERS];
 };
+extern struct socks5args socks5args;
 
 /**
  * Interpreta la linea de comandos (argc, argv) llenando

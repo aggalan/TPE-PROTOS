@@ -32,29 +32,6 @@ int main(int argc, char *argv[]) {
         perror("calloc");
         return 1;
     }
-
-    char user[64], pass[64];
-
-    puts("Login required");
-    printf("Username: ");
-    if (fgets(user, sizeof user, stdin) == NULL) {
-        perror("fgets");
-        return 1;
-    }
-    user[strcspn(user, "\n")] = 0;
-    printf("Password: ");
-    if (fgets(pass, sizeof pass, stdin) == NULL) {
-        perror("fgets");
-        return 1;
-    }
-    pass[strcspn(pass, "\n")] = 0;
-
-    if (strcmp(user, ADMIN_USER) != 0 || strcmp(pass, ADMIN_PASS) != 0) {
-        fputs("Authentication failed\n", stderr);
-        return 1;
-    }
-    printf("Authenticated!  Connecting to %s:%hu …\n", addr, port);
-
     struct sockaddr_in serv;
     serv.sin_addr.s_addr = inet_addr(addr);
     serv.sin_family = AF_INET;

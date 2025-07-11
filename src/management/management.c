@@ -1,6 +1,7 @@
 #include "management.h"
 #include "../metrics/metrics.h"
 #include "../admin/admin.h"
+#include "../args/args.h"
 #include "../logging/logger.h"
 
 #include <stdlib.h>
@@ -14,16 +15,6 @@
 #define MAX_LINE 512
 #define MAX_UDP_PACKET 1024
 
-
-struct mgmt_client {
-    int fd;
-    char buf[MAX_LINE];
-    size_t buf_used;
-    char *response;
-    size_t response_len;
-    size_t response_sent;
-
-};
 
 typedef int (*cmd_handler_t)(char *args, char **out, size_t *outlen);
 
@@ -84,6 +75,22 @@ static int handle_listusers(char *args, char **out, size_t *outlen) {
     return 0;
 }
 
+static int handle_setauth(char *args, char **out, size_t *outlen) {
+    if(strcmp(args, "enable") == 0) {
+         socks5args.authentication_enabled = true;
+    }
+    else if (strcmp(args, "disable") == 0) {
+         socks5args.authentication_enabled = false;
+    } else {
+        LOG_ERROR("Comando setauth inválido: %s", args);
+        const char *msg = "ERROR: comando setauth inválido\n";
+        *out = strdup(msg);
+        *outlen = strlen(msg);
+        return 1;
+    }
+    return 0;
+}
+
 
 
 static struct {
@@ -94,7 +101,7 @@ static struct {
         {"adduser",   handle_adduser},
         {"deluser",   handle_deluser},
         {"listusers", handle_listusers},
-        {"setauth",     NULL},
+        {"setauth",     handle_setauth},
         {NULL,         NULL}
 };
 

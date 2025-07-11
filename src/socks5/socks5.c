@@ -27,6 +27,8 @@
 #define ERROR_CODE -1
 
 
+
+
 static void socksv5_read(struct selector_key *key);
 static void socksv5_write(struct selector_key *key);
 static void socksv5_close(struct selector_key *key);
