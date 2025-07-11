@@ -8,7 +8,7 @@
 
 
 void authentication_init(const unsigned state, struct selector_key *key) {
-    if(state!=(unsigned int)0){
+    if(state!=(unsigned int)0 && state!=(unsigned int)2 ){
         LOG_ERROR("[Authentication]: Initiated with an invalid state: %u\n", state);
         return;
     }    

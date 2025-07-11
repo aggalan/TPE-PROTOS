@@ -64,9 +64,12 @@ AuthState authentication_parse(AuthParser *parser, buffer *buffer) {
 }
 
 AuthState parse_version(AuthParser * parser, uint8_t byte){
+    if(parser->state!=(unsigned int)0 && parser->state!=(unsigned int)2 ){
+    LOG_ERROR("[Authentication]: parse_version Initiated with an invalid state: %u\n", parser->state);
+    return;
+    }  
     LOG_DEBUG("Version parsed: %d\n",byte);
     LOG_DEBUG("Expected version: %d\n", AUTH_VERSION_USER_PASS);
-    LOG_DEBUG("Parser state: %d\n", parser->state);
     if(byte != AUTH_VERSION_USER_PASS){
         LOG_ERROR("parse_version: Oof! Ouch! Version %d is invalid :/\n",byte);
         return AUTH_ERROR;
