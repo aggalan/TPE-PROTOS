@@ -262,6 +262,9 @@ void _closeConnection(struct selector_key *key)
 
 void socksv5_done(const unsigned state, struct selector_key * key)
 {
+    if(state!=DONE){
+        LOG_ERROR("socksv5_done called with unexpected state: %u\n", state);
+    }
     LOG_DEBUG("Socks DONE...\n");
     const int fds[] = {
         ATTACHMENT(key)->client_fd,
@@ -282,7 +285,27 @@ void socksv5_done(const unsigned state, struct selector_key * key)
 }
 
 void socksv5_error(const unsigned state, struct selector_key * key){
-    LOG_ERROR("Socks error\n");
+    LOG_ERROR("Socks error (state: %u)\n", state);
     metrics_closed_connection();
-//    ATTACHMENT(key)->closed = true;
+    
+    if (key != NULL && ATTACHMENT(key) != NULL) {
+        SocksClient *data = ATTACHMENT(key);
+        data->closed = true;
+        
+        if (data->client_fd != -1) {
+            selector_unregister_fd(key->s, data->client_fd);
+            close(data->client_fd);
+        }
+        if (data->origin_fd != -1) {
+            selector_unregister_fd(key->s, data->origin_fd);
+            close(data->origin_fd);
+        }
+        
+        if (data->origin_resolution != NULL) {
+            freeaddrinfo(data->origin_resolution);
+            data->origin_resolution = NULL;
+        }
+        
+        free(data);
+    }
 }
