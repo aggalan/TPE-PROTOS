@@ -8,6 +8,8 @@
 
 
 static const uint8_t SOCKS_VERSION = 0x05;
+struct socks5args socks5args;
+
 
 typedef NegState (*parse_character)(NegParser * parser, uint8_t byte);
 

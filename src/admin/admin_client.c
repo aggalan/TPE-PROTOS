@@ -14,6 +14,7 @@ void help(){
     puts("  listusers         - list configured users\n");
     puts("  adduser <u> <p>   - add a user with password\n");
     puts("  deluser <u>       - delete a user\n");
+    puts("  setauth <enabled|disabled> - enable or disable authentication\n");
     puts("  help              - this help\n");
     puts("  exit              - quit client\n");
 }

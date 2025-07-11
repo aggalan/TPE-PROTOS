@@ -14,6 +14,7 @@
 
 #define MAX_LINE 512
 #define MAX_UDP_PACKET 1024
+struct socks5args socks5args;
 
 
 typedef int (*cmd_handler_t)(char *args, char **out, size_t *outlen);
@@ -76,17 +77,22 @@ static int handle_listusers(char *args, char **out, size_t *outlen) {
 }
 
 static int handle_setauth(char *args, char **out, size_t *outlen) {
-    if(strcmp(args, "enable") == 0) {
+    if(strcmp(args, "enabled") == 0) {
          socks5args.authentication_enabled = true;
+         LOG_DEBUG("Autenticación habilitada");
+        *out = strdup("Autenticación habilitada\n");
+        *outlen = strlen(*out);
     }
-    else if (strcmp(args, "disable") == 0) {
+    else if (strcmp(args, "disabled") == 0) {
          socks5args.authentication_enabled = false;
+         LOG_DEBUG("Autenticación deshabilitada");
+         *out = strdup("Autenticación deshabilitada\n");
+         *outlen = strlen(*out);
     } else {
         LOG_ERROR("Comando setauth inválido: %s", args);
         const char *msg = "ERROR: comando setauth inválido\n";
         *out = strdup(msg);
         *outlen = strlen(msg);
-        return 1;
     }
     return 0;
 }
