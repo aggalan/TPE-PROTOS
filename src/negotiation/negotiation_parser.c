@@ -41,6 +41,7 @@ NegState negotiation_parse(NegParser * parser, buffer * buffer){
 // -- State handlers ----------------------------------------------------------
 NegState parse_version(NegParser * parser, uint8_t byte){
     LOG_DEBUG("Parsed version: %d\n",byte);
+    LOG_DEBUG("Parser state: %d\n", parser->state);
     if(byte!=SOCKS_VERSION){
         LOG_ERROR("parse_version: Client tried negotiating an invalid version.\n");
         return NEG_ERROR;
