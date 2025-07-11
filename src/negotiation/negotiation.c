@@ -7,8 +7,8 @@
 
 
 void negotiation_init(const unsigned state,struct selector_key *key) {
+    if(state==NULL) return;
     LOG_DEBUG("Creating negotiation...\n");
-    LOG_DEBUG("Parser state: %d\n", parser->state);
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;

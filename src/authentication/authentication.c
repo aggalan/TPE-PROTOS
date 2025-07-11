@@ -8,8 +8,8 @@
 
 
 void authentication_init(const unsigned state, struct selector_key *key) {
+    if(state==NULL) return;
     LOG_DEBUG("Creating authentication...\n");
-    LOG_DEBUG("State: %u\n", state);
     SocksClient *socks = ATTACHMENT(key);
     if (socks == NULL) {
         return;
