@@ -60,6 +60,27 @@ static int setup_listener(const char* addr, unsigned short port) {
     return sock;
 }
 
+static int setup_udp_listener(const char* addr, unsigned short port) {
+    struct sockaddr_in sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sin_family = AF_INET;
+    inet_pton(AF_INET, addr, &sa.sin_addr);
+    sa.sin_port = htons(port);
+
+    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock < 0) return -1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+    if (bind(sock, (struct sockaddr*)&sa, sizeof(sa)) < 0) {
+        close(sock);
+        return -1;
+    }
+    if (selector_fd_set_nio(sock) == -1) {
+        close(sock);
+        return -1;
+    }
+    return sock;
+}
+
 int main(const int argc, const char** argv) {
     logger_init();
     metrics_init();
@@ -103,13 +124,13 @@ int main(const int argc, const char** argv) {
 
 
 
-    int mng_sock = setup_listener(args.mng_addr, args.mng_port);
+    int mng_sock = setup_udp_listener(args.mng_addr, args.mng_port);
     if (mng_sock < 0) {
         perror("bind/listen management");
         return 1;
     }
     const struct fd_handler management_handler = {
-            .handle_read  = mgmt_accept,
+            .handle_read  = mgmt_udp_handle,
             .handle_write = NULL,
             .handle_close = NULL
     };

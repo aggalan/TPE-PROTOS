@@ -9,10 +9,8 @@
 #include <fcntl.h>
 #include "selector/selector.h"
 
-void mgmt_accept(struct selector_key *key);
-void mgmt_read  (struct selector_key *key);
-void mgmt_write (struct selector_key *key);
-void mgmt_close (struct selector_key *key);
+
+void mgmt_udp_handle(struct selector_key *key);
 
 
 #endif // TPE_PROTOS_MANAGEMENT_H

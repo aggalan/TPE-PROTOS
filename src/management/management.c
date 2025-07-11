@@ -9,8 +9,11 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <netinet/in.h>
 
 #define MAX_LINE 512
+#define MAX_UDP_PACKET 1024
+
 
 struct mgmt_client {
     int fd;
@@ -91,25 +94,29 @@ static struct {
         {"adduser",   handle_adduser},
         {"deluser",   handle_deluser},
         {"listusers", handle_listusers},
-        {"setauth",     NULL}, // No handler, just for help
+        {"setauth",     NULL},
         {NULL,         NULL}
 };
 
-static void process_command(struct mgmt_client *c) {
-    char *line = c->buf;
-    char *eol  = strchr(line, '\n');
+static int process_udp_command(char *command, char **out, size_t *outlen) {
+    char *eol = strchr(command, '\n');
     if (eol) *eol = '\0';
 
-    char *cmd  = strtok(line, " \t");
+    char *cmd_copy = strdup(command);
+    if (!cmd_copy) return -1;
+
+    char *cmd = strtok(cmd_copy, " \t");
     char *args = strtok(NULL, "");
-    char *out  = NULL;
-    size_t outlen = 0;
+    char *response = NULL;
+    size_t response_len = 0;
     int rc = -1;
 
     if (cmd) {
         for (int i = 0; commands[i].name; i++) {
             if (strcmp(cmd, commands[i].name) == 0) {
-                rc = commands[i].handler(args, &out, &outlen);
+                if (commands[i].handler) {
+                    rc = commands[i].handler(args, &response, &response_len);
+                }
                 break;
             }
         }
@@ -117,96 +124,52 @@ static void process_command(struct mgmt_client *c) {
 
     if (rc == 0) {
         LOG_DEBUG("Comando '%s' procesado correctamente", cmd);
-        if (c->response) free(c->response);
-        c->response      = out;
-        c->response_len  = outlen;
+        *out = response;
+        *outlen = response_len;
     } else {
-        LOG_ERROR("Comando '%s' fallido o no reconocido", cmd);
+        LOG_ERROR("Comando '%s' fallido o no reconocido", cmd ? cmd : "NULL");
         const char *msg = "ERROR: comando inválido o fallo interno\n";
-        if (c->response) free(c->response);
-        c->response      = strdup(msg);
-        c->response_len  = strlen(msg);
+        *out = strdup(msg);
+        *outlen = strlen(msg);
     }
 
-    c->response_sent = 0;
-    c->buf_used      = 0;
-    c->buf[0]        = '\0';
+    free(cmd_copy);
+    return rc;
 }
 
-void mgmt_read(struct selector_key *key) {
-    LOG_DEBUG("Reading management connection on fd %d", key->fd);
-    struct mgmt_client *c = key->data;
-    ssize_t n = read(c->fd, c->buf + c->buf_used, MAX_LINE - c->buf_used - 1);
+
+void mgmt_udp_handle(struct selector_key *key) {
+    LOG_DEBUG("Received UDP management packet on fd %d", key->fd);
+
+    char buffer[MAX_UDP_PACKET];
+    struct sockaddr_in client_addr;
+    socklen_t client_len = sizeof(client_addr);
+
+    ssize_t n = recvfrom(key->fd, buffer, sizeof(buffer) - 1, 0,
+                         (struct sockaddr*)&client_addr, &client_len);
+
     if (n <= 0) {
-        selector_unregister_fd(key->s, key->fd);
+        LOG_ERROR("Error receiving UDP packet: %s", strerror(errno));
         return;
     }
-    c->buf_used += n;
-    c->buf[c->buf_used] = '\0';
 
-    if (strchr(c->buf, '\n')) {
-        LOG_DEBUG("Received command: %s", c->buf);
-        process_command(c);
-//        if one of the commands is set auth active
-//          then c->auth = true;
-//          if one comand is set auth inactive
-//          is set c->auth = false;
+    buffer[n] = '\0';
+    LOG_DEBUG("Received UDP command: %s", buffer);
 
-        selector_set_interest(key->s, c->fd, OP_WRITE);
+    char *response = NULL;
+    size_t response_len = 0;
+    process_udp_command(buffer, &response, &response_len);
+
+    if (response && response_len > 0) {
+        ssize_t sent = sendto(key->fd, response, response_len, 0,
+                              (struct sockaddr*)&client_addr, client_len);
+        if (sent < 0) {
+            LOG_ERROR("Error sending UDP response: %s", strerror(errno));
+        } else if ((size_t)sent != response_len) {
+            LOG_WARNING("UDP response truncated: sent %zd of %zu bytes", sent, response_len);
+        } else {
+            LOG_DEBUG("UDP response sent successfully (%zu bytes)", response_len);
+        }
+        free(response);
     }
-}
-
-void mgmt_write(struct selector_key *key) {
-    LOG_DEBUG("Sending response for management connection on fd %d", key->fd);
-    struct mgmt_client *c = key->data;
-    ssize_t n = write(c->fd,
-                      c->response + c->response_sent,
-                      c->response_len - c->response_sent);
-    if (n <= 0) {
-        LOG_ERROR("Error writing to management connection fd %d: %s", key->fd, strerror(errno));
-        selector_unregister_fd(key->s, key->fd);
-        return;
-    }
-    c->response_sent += n;
-
-    if (c->response_sent < c->response_len) {
-        LOG_DEBUG("Sent %zd bytes, waiting for more", n);
-        selector_set_interest(key->s, c->fd, OP_WRITE);
-    } else {
-        LOG_DEBUG("Response sent completely, resetting state");
-        free(c->response);
-        c->response = NULL;
-        c->response_len = c->response_sent = 0;
-        selector_set_interest(key->s, c->fd, OP_READ);
-    }
-}
-
-void mgmt_close(struct selector_key *key) {
-    LOG_DEBUG("Closing management connection on fd %d", key->fd);
-    struct mgmt_client *c = key->data;
-    if (!c) return;
-    if (c->response) free(c->response);
-    close(c->fd);
-    free(c);
-}
-
-void mgmt_accept(struct selector_key *key) {
-    LOG_DEBUG("New management connection accepted on fd %d", key->fd);
-    int fd = accept(key->fd, NULL, NULL);
-    if (fd < 0) return;
-    fcntl(fd, F_SETFL, O_NONBLOCK);
-
-    struct mgmt_client *c = calloc(1, sizeof(*c));
-    c->fd            = fd;
-    c->buf_used      = 0;
-    c->response      = NULL;
-    c->response_len  = 0;
-    c->response_sent = 0;
-
-    static const struct fd_handler handler = {
-            .handle_read  = mgmt_read,
-            .handle_write = mgmt_write,
-            .handle_close = mgmt_close,
-    };
-    selector_register(key->s, fd, &handler, OP_READ, c);
 }
