@@ -10,11 +10,11 @@ static const uint8_t SOCKS_VERSION = 0x05;
 typedef NegState (*parse_character)(NegParser * parser, uint8_t byte);
 
 parse_character parse_functions[] = {
-    [NEG_VERSION] = (parse_character) parse_version,
-    [NEG_NMETHODS] = (parse_character) parse_method_count,
-    [NEG_METHODS] = (parse_character) parse_methods,
-    [NEG_END] = (parse_character) parse_end,
-    [NEG_ERROR] = (parse_character) parse_end
+    [NEG_VERSION] = (parse_character) parse_version,  // Version is handled directly
+    [NEG_NMETHODS] = (parse_character) parse_method_count, // Number of methods is handled directly
+    [NEG_METHODS] = (parse_character) parse_methods,  // Methods are handled directly
+    [NEG_END] = (parse_character) parse_end,  // End state does not require parsing
+    [NEG_ERROR] = (parse_character) parse_end // Error state does not require parsing
 };
 
 // -- Public API --------------------------------------------------------------
