@@ -71,7 +71,7 @@ int main(const int argc, const char** argv) {
     LOG_INFO("Proxy SOCKS en %s:%hu, Management en %s:%hu\n",
            args.socks_addr, args.socks_port,
            args.mng_addr,    args.mng_port);
-
+    args.authentication_enabled = true;
     signal(SIGTERM, sigterm_handler);
     signal(SIGINT,  sigterm_handler);
 

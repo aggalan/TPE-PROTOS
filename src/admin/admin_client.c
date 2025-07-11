@@ -59,18 +59,16 @@ int main(int argc, char *argv[]) {
     serv.sin_addr.s_addr = inet_addr(addr);
     serv.sin_family = AF_INET;
     serv.sin_port = htons(port);
+    socklen_t serv_len = sizeof(serv);
 
-    if ((client->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    if ((client->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         printf("Error creating client socket");
         exit(1);
     }
 
-    if (connect(client->fd, (struct sockaddr *) &serv, sizeof(serv)) < 0) {
-        printf("Error connecting client socket");
-        exit(1);
-    }
-
+    printf("UDP socket created. Ready to send commands.\n");
     printf("Type 'help' for available commands, 'exit' to quit.\n");
+
     while (1) {
         printf("> "); fflush(stdout);
         if ((read_buff->amount = (int) read(STDIN_FILENO, read_buff->buffer, BUFF_SIZE)) < 0) {
@@ -89,18 +87,22 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        ssize_t n = send(client->fd, read_buff->buffer, read_buff->amount, 0);
+        ssize_t n = sendto(client->fd, read_buff->buffer, read_buff->amount, 0,
+                           (struct sockaddr*)&serv, serv_len);
         if (n != read_buff->amount) {
-            fprintf(stderr, "send() sent unexpected number of bytes.\n");
+            fprintf(stderr, "sendto() sent unexpected number of bytes.\n");
         }
 
         errno = 0;
-        ssize_t bytes_read = recv(client->fd, client->buffer, sizeof(client->buffer) - 1, 0);
+        struct sockaddr_in from_addr;
+        socklen_t from_len = sizeof(from_addr);
+        ssize_t bytes_read = recvfrom(client->fd, client->buffer, sizeof(client->buffer) - 1, 0,
+                                      (struct sockaddr*)&from_addr, &from_len);
         if (bytes_read <= 0) {
-            fprintf(stderr, "recv() failed: %s\n", strerror(errno));
+            fprintf(stderr, "recvfrom() failed: %s\n", strerror(errno));
             exit(1);
         } else {
-            client->buffer[bytes_read] = '\0';  // Null terminate
+            client->buffer[bytes_read] = '\0';
             printf("%s", client->buffer);
             memset(client->buffer, 0, bytes_read);
             memset(read_buff->buffer, 0, read_buff->amount);

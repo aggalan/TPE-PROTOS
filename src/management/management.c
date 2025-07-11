@@ -82,6 +82,7 @@ static int handle_listusers(char *args, char **out, size_t *outlen) {
 }
 
 
+
 static struct {
     const char *name;
     cmd_handler_t handler;
@@ -90,7 +91,7 @@ static struct {
         {"adduser",   handle_adduser},
         {"deluser",   handle_deluser},
         {"listusers", handle_listusers},
-        {"exit",      NULL}, // No handler, just for help
+        {"setauth",     NULL}, // No handler, just for help
         {NULL,         NULL}
 };
 
@@ -146,6 +147,11 @@ void mgmt_read(struct selector_key *key) {
     if (strchr(c->buf, '\n')) {
         LOG_DEBUG("Received command: %s", c->buf);
         process_command(c);
+//        if one of the commands is set auth active
+//          then c->auth = true;
+//          if one comand is set auth inactive
+//          is set c->auth = false;
+
         selector_set_interest(key->s, c->fd, OP_WRITE);
     }
 }

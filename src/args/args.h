@@ -20,6 +20,7 @@ struct socks5args
     unsigned short mng_port;
 
     bool disectors_enabled;
+    bool authentication_enabled;
 
     struct users users[MAX_USERS];
 };

@@ -93,3 +93,4 @@ char *admin_list_users(void) {
     if (len > 0 && out[len-1] == '\n') out[len-1] = '\0';
     return out;
 }
+

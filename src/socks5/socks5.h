@@ -52,7 +52,6 @@ typedef struct socks5 {
     uint8_t read_buffer_space[BUFFER_SIZE];
     uint8_t write_buffer_space[BUFFER_SIZE];
     bool                       closed;
-    bool                       auth;
     struct state_machine       stm;
     struct sockaddr_storage    client_addr;
     struct addrinfo*           origin_resolution;
