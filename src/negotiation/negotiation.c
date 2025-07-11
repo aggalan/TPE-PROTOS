@@ -7,7 +7,7 @@
 
 
 void negotiation_init(const unsigned state,struct selector_key *key) {
-    if(state!=(unsigned int)0){
+    if(state!=NEGOTIATION_READ){
         LOG_ERROR("[Negotiation] Initiated with an invalid state: %u\n", state);
         return;
     }
