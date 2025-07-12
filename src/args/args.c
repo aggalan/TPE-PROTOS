@@ -7,7 +7,7 @@
 
 #include "args.h"
 #include "logger.h"
-
+struct socks5args socks5args;
 static unsigned short
 port(const char* s)
 {

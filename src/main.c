@@ -91,7 +91,7 @@ int main(const int argc, const char** argv) {
     LOG_INFO("Proxy SOCKS en %s:%hu, Management en %s:%hu\n",
              socks5args.socks_addr, socks5args.socks_port,
              socks5args.mng_addr,    socks5args.mng_port);
-    socks5args.authentication_enabled = true;
+    socks5args.authentication_enabled = false;
     signal(SIGTERM, sigterm_handler);
     signal(SIGINT,  sigterm_handler);
 
