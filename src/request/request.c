@@ -172,6 +172,9 @@ void* request_dns_resolve(void *data) {
     if (err != 0) {
         LOG_ERROR("DNS resolution failed for %s:%d: %s", socks->client.request_parser.dst_addr.domainname, socks->client.request_parser.dst_port, gai_strerror(err));
         socks->origin_resolution = NULL;
+        socks->current_addr = NULL;
+    } else {
+    socks->current_addr = socks->origin_resolution; 
     }
     selector_notify_block(key->s, key->fd);
 
@@ -211,23 +214,21 @@ unsigned request_connecting(struct selector_key *key) {
     }
 
     if (error) {
-        // Could not connect to the first address, try with the next one, if exists
         if (data->origin_resolution->ai_next == NULL) {
             LOG_INFO( "Failed to fulfill connection request from client %d", data->client_fd);
+            freeaddrinfo(data->origin_resolution); 
+            data->origin_resolution = NULL;
+            data->current_addr = NULL;
             return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
         } else {
-            LOG_INFO("Failed to connect to %s:%d, trying next address", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);
+            LOG_INFO( "Next attempt at connection request from client %d", data->client_fd);
             selector_unregister_fd(key->s, data->origin_fd);
             close(data->origin_fd);
-            struct addrinfo* next = data->origin_resolution->ai_next;
-            data->origin_resolution->ai_next = NULL;
-            freeaddrinfo(data->origin_resolution);
-            data->origin_resolution = next;
+            data->current_addr = data->current_addr->ai_next;
             return request_create_connection(key);
         }
     }
 
-    //mandar la respuesta
     if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser, &data->write_buffer, key)) {
         LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
@@ -239,7 +240,20 @@ unsigned request_connecting(struct selector_key *key) {
 
 unsigned request_create_connection(struct selector_key *key) {
     SocksClient * data = ATTACHMENT(key);
-    LOG_DEBUG("Creating socket\n");
+    LOG_INFO("Creating socket\n");
+    char host[NI_MAXHOST], serv[NI_MAXSERV];
+    int r = getnameinfo(
+        (struct sockaddr *)data->current_addr->ai_addr,
+        data->current_addr->ai_addrlen,
+        host, sizeof(host),
+        serv, sizeof(serv),
+        NI_NUMERICHOST | NI_NUMERICSERV
+    );
+    if (r == 0) {
+        LOG_INFO("Trying to connect to %s:%s (Client %d)", host, serv, data->client_fd);
+    } else {
+        LOG_INFO("Trying to connect to [unknown address] (Client %d)", data->client_fd);
+    }
     data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | O_NONBLOCK, 0);
     if(data->origin_fd < 0){
         data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM, 0);
@@ -251,9 +265,9 @@ unsigned request_create_connection(struct selector_key *key) {
 
     selector_fd_set_nio(data->origin_fd);
 
-    LOG_DEBUG("Socket created!\n");
+    LOG_INFO("Socket created!\n");
 
-    if(connect(data->origin_fd, data->origin_resolution->ai_addr, data->origin_resolution->ai_addrlen) == 0 || errno == EINPROGRESS){
+    if(connect(data->origin_fd, data->origin_resolution->ai_addr, data->current_addr->ai_addrlen) == 0 || errno == EINPROGRESS){
         if (selector_register(key->s, data->origin_fd, get_fd_handler() , OP_WRITE, data) != SELECTOR_SUCCESS) {
             LOG_ERROR("Failed to register origin fd %d in selector\n", data->origin_fd);
             close(data->origin_fd);
@@ -264,19 +278,20 @@ unsigned request_create_connection(struct selector_key *key) {
             return ERROR;
         }
 
-        LOG_DEBUG("Attemping connection with Client Number %d\n",data->client_fd);
+        LOG_INFO("Attemping connection with Client Number %d\n",data->client_fd);
         return REQUEST_CONNECTING;
     }
 
     if(data->origin_resolution->ai_next != NULL){
         LOG_INFO("Attempting connection with Client Number %d\n",data->client_fd);
-        selector_unregister_fd(key->s, data->origin_fd); //Unregistereamos el Socket fallido del Selector
-        close(data->origin_fd); //Lo Cerramos (duh)
-        struct addrinfo *next = data->origin_resolution->ai_next; //Preparamos el proximo
-        data->origin_resolution->ai_next = NULL; //Lo detacheamos de la Lista para hacerle free
-        freeaddrinfo(data->origin_resolution); //Free
-        data->origin_resolution = next;
+        data->current_addr = data->current_addr->ai_next; //Preparamos el proximo
         return request_create_connection(key); //Empezamos again
+    }
+    else{
+        freeaddrinfo(data->origin_resolution);
+        data->origin_resolution = NULL;
+        data->current_addr = NULL;
+        return request_error(data, key, -1);
     }
 
     return request_error(data, key, -1);
