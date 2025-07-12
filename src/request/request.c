@@ -283,17 +283,14 @@ unsigned request_create_connection(struct selector_key *key) {
     }
 
     if(data->origin_resolution->ai_next != NULL){
-        LOG_INFO("Attempting connection with Client Number %d\n",data->client_fd);
-        data->current_addr = data->current_addr->ai_next; //Preparamos el proximo
-        return request_create_connection(key); //Empezamos again
-    }
-    else{
+        selector_unregister_fd(key->s, data->origin_fd);
+        close(data->origin_fd);
+        struct addrinfo* next = data->origin_resolution->ai_next;
+        data->origin_resolution->ai_next = NULL;
         freeaddrinfo(data->origin_resolution);
-        data->origin_resolution = NULL;
-        data->current_addr = NULL;
-        return request_error(data, key, -1);
+        data->origin_resolution = next;
+        return request_create_connection(key);
     }
-
     return request_error(data, key, -1);
 }
 
