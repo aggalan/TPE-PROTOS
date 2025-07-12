@@ -14,6 +14,8 @@ void help(){
     puts("  listusers         - list configured users\n");
     puts("  adduser <u> <p>   - add a user with password\n");
     puts("  deluser <u>       - delete a user\n");
+    puts("  setauth <enabled|disabled> - enable or disable authentication\n");
+    puts("  login <u> <p>     - authenticate user\n");
     puts("  help              - this help\n");
     puts("  exit              - quit client\n");
 }
@@ -45,6 +47,7 @@ int main(int argc, char *argv[]) {
 
     printf("UDP socket created. Ready to send commands.\n");
     printf("Type 'help' for available commands, 'exit' to quit.\n");
+    printf("Don't forget to login with 'login <user> <pass>' before sending commands.\n");
 
     while (1) {
         printf("> "); fflush(stdout);

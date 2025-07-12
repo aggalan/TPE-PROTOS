@@ -73,6 +73,7 @@ typedef struct request_parser {
 typedef enum request_codes {
     REQ_OK = 0,
     REQ_FULLBUFFER,
+    REQ_UNSUPORTED_ATYP,
 } ReqCodes;
 
 const char* request_to_string(const ReqParser * p);
