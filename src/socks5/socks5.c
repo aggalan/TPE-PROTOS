@@ -85,6 +85,8 @@ static const struct state_definition client_actions[] = {
     {
         .state = REQUEST_CONNECTING,
         .on_arrival = request_connecting_init,
+        .on_read_ready = request_connecting,
+        .on_block_ready = request_connecting,
         .on_write_ready = request_connecting,
     },
     {

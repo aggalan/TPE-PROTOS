@@ -55,6 +55,7 @@ typedef struct socks5 {
     struct state_machine       stm;
     struct sockaddr_storage    client_addr;
     struct addrinfo*           origin_resolution;
+    struct addrinfo*           current_addr; 
     socklen_t                  client_addr_len;
     union {
         struct relay relay;

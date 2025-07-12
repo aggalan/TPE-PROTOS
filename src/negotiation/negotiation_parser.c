@@ -12,6 +12,12 @@ static const uint8_t SOCKS_VERSION = 0x05;
 
 typedef NegState (*parse_character)(NegParser * parser, uint8_t byte);
 
+// Static function declarations
+static NegState parse_version(NegParser * parser, uint8_t byte);
+static NegState parse_method_count(NegParser * parser, uint8_t byte);
+static NegState parse_methods(NegParser * parser, uint8_t byte);
+static NegState parse_end(NegParser * parser, uint8_t byte);
+
 parse_character parse_functions[] = {
     [NEG_VERSION] = (parse_character) parse_version,  // Version is handled directly
     [NEG_NMETHODS] = (parse_character) parse_method_count, // Number of methods is handled directly
@@ -91,7 +97,7 @@ NegState parse_end(NegParser * parser, uint8_t byte){
     LOG_DEBUG("parse_end: Unexpected byte %d received in END state\n", byte);
     // END state should not process additional bytes
     // This might indicate a protocol violation or buffer issue
-    return parser != NULL  && parser->state == NEG_END && byte==0;;
+    return (parser != NULL && parser->state == NEG_END && byte==0) ? NEG_END : NEG_ERROR;
 }
 
 

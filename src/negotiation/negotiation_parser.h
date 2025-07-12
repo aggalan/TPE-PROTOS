@@ -132,41 +132,4 @@ bool has_negotiation_errors(NegParser *parser);
  * @note Si auth_method es NO_METHOD, retorna NEG_INVALID_METHOD
  */
 NegCodes fill_negotiation_answer(NegParser *parser, buffer *buffer);
-
-// ============================================================================
-// FUNCIONES INTERNAS DE PARSING (DECLARACIONES)
-// ============================================================================
-
-/**
- * @brief Procesa el byte de versión SOCKS
- * @param parser Puntero al parser
- * @param byte Byte de versión recibido
- * @return NegState Próximo estado del parser
- */
-NegState parse_version(NegParser *parser, uint8_t byte);
-
-/**
- * @brief Procesa el número de métodos de autenticación
- * @param parser Puntero al parser
- * @param byte Número de métodos soportados por el cliente
- * @return NegState Próximo estado del parser
- */
-NegState parse_method_count(NegParser *parser, uint8_t byte);
-
-/**
- * @brief Procesa cada método de autenticación propuesto
- * @param parser Puntero al parser
- * @param byte Método de autenticación
- * @return NegState Próximo estado del parser
- */
-NegState parse_methods(NegParser *parser, uint8_t byte);
-
-/**
- * @brief Maneja el estado final de la negociación
- * @param parser Puntero al parser
- * @param byte Byte recibido (no utilizado en estado final)
- * @return NegState Estado final
- */
-NegState parse_end(NegParser *parser, uint8_t byte);
-
 #endif /* NEGOTIATION_PARSER_H */

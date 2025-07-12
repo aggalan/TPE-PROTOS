@@ -9,16 +9,14 @@ CHECK_LIBS   := $(shell $(PKG_CONFIG) --libs   check 2>/dev/null) -pthread
 # ----------- Project layout -------------------------------------------
 SRCDIR       := src
 
-# All source files, found recursively (works for src/greeting/*.c, etc.)
-ALL_SRCS     := $(shell find $(SRCDIR) -name '*.c')
+# Fast file discovery using wildcards (much faster than find)
+PROD_SRCS := $(wildcard $(SRCDIR)/*.c) \
+             $(wildcard $(SRCDIR)/*/*.c)
 
-# admin client source (contains its own main)
+# Exclude test files and admin client
+TEST_SRCS    := $(filter %_test.c,$(PROD_SRCS))
 ADMIN_CLIENT_SRC := $(SRCDIR)/admin/admin_client.c
-
-# Split test vs production sources by “*_test.c” naming convention
-TEST_SRCS    := $(filter %_test.c,$(ALL_SRCS))
-# Production sources exclude unit tests and the admin client main
-PROD_SRCS    := $(filter-out $(TEST_SRCS) $(ADMIN_CLIENT_SRC),$(ALL_SRCS))
+PROD_SRCS    := $(filter-out $(TEST_SRCS) $(ADMIN_CLIENT_SRC),$(PROD_SRCS))
 
 # Map *.c → *.o (object files live next to their sources)
 PROD_OBJS    := $(PROD_SRCS:.c=.o)
@@ -27,14 +25,12 @@ TEST_OBJS    := $(TEST_SRCS:.c=.o)
 # Objects used to build the main proxy executable
 MAIN_OBJS    := $(PROD_OBJS)
 
-# Admin client specific objects -----------------------------------------
-#   – COMMON_OBJS: everything the proxy uses **except** src/main.o
+# Admin client specific objects
 COMMON_OBJS  := $(filter-out $(SRCDIR)/main.o $(ADMIN_CLIENT_SRC:.c=.o),$(PROD_OBJS))
 ADMIN_CLIENT_OBJS := $(COMMON_OBJS) $(ADMIN_CLIENT_SRC:.c=.o)
 
-# Collect every directory under src and turn each into a -I flag
-SUBDIRS      := $(shell find $(SRCDIR) -type d)
-INCLUDE_DIRS := $(addprefix -I,$(SUBDIRS))
+# Include directories - use wildcard for speed
+INCLUDE_DIRS := -I$(SRCDIR) $(addprefix -I,$(wildcard $(SRCDIR)/*/))
 
 # ----------- Flags -----------------------------------------------------
 # Optional DEBUG build: pass DEBUG=1 (or any non-empty value) to enable
@@ -47,6 +43,9 @@ endif
 CFLAGS       := -Wall -Wextra -std=gnu99 $(DEBUG_FLAGS) $(INCLUDE_DIRS) -pthread $(CHECK_CFLAGS)
 LDFLAGS      := -pthread $(CHECK_LIBS)
 
+# Enable parallel builds
+MAKEFLAGS += -j$(shell nproc 2>/dev/null || echo 4)
+
 # ----------- Targets ---------------------------------------------------
 TARGET       := main
 TEST_TARGET  := test_runner
@@ -58,19 +57,27 @@ all: $(TARGET)
 
 # Main proxy ------------------------------------------------------------
 $(TARGET): $(MAIN_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Linking $@..."
+	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # Test runner -----------------------------------------------------------
 $(TEST_TARGET): $(MAIN_OBJS) $(TEST_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Linking $@..."
+	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # Admin management client ----------------------------------------------
 $(ADMIN_TARGET): $(ADMIN_CLIENT_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Linking $@..."
+	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-# Generic compile rule --------------------------------------------------
+# Generic compile rule with dependency generation
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "Compiling $<..."
+	@$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+# Include dependency files
+-include $(PROD_OBJS:.o=.d)
+-include $(TEST_OBJS:.o=.d)
 
 # Run tests -------------------------------------------------------------
 test: $(TEST_TARGET)
@@ -78,5 +85,8 @@ test: $(TEST_TARGET)
 
 # House-keeping ---------------------------------------------------------
 clean:
-	find $(SRCDIR) -name '*.o' -delete
-	rm -f $(TARGET) $(TEST_TARGET) $(ADMIN_TARGET)
+	@echo "Cleaning build artifacts..."
+	@find $(SRCDIR) -name '*.o' -delete
+	@find $(SRCDIR) -name '*.d' -delete
+	@rm -f $(TARGET) $(TEST_TARGET) $(ADMIN_TARGET)
+	@echo "Clean completed!"
