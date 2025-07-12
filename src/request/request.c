@@ -222,8 +222,8 @@ unsigned request_connecting(struct selector_key *key) {
             freeaddrinfo(data->origin_resolution);
             data->origin_resolution = NULL;
             data->current_addr = NULL;
-            LOG_INFO("ERROR: %d\n", errno);
-            return request_error(data, key, errno_to_req_status(errno));
+            LOG_INFO("ERROR: %d\n", error);
+            return request_error(data, key, errno_to_req_status(error));
         } else {
             LOG_INFO( "Next attempt at connection request from client %d \n", data->client_fd);
             selector_unregister_fd(key->s, data->origin_fd);
