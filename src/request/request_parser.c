@@ -42,6 +42,9 @@ ReqState request_parse(ReqParser* parser, buffer* buffer) {
     if (parser == NULL || buffer == NULL) return REQ_ERROR;
     while (buffer_can_read(buffer)) {
         parser->state=parse_functions[parser->state](parser,buffer_read(buffer));
+        if (parser->state == REQ_END || parser->state == REQ_ERROR) {
+            break;
+        }
     }
     return parser->state==REQ_END ? parse_end(parser,0):parser->state;
 }
@@ -109,9 +112,9 @@ ReqState parse_dnlen(ReqParser * parser, uint8_t byte) {
 
 ReqState parse_dst_addr(ReqParser * parser, uint8_t byte) {
     LOG_DEBUG("parse_dst_addr: Parsing destination address byte %d\n", byte);
-    parser->buf[parser->buf_idx++] = byte;
     switch (parser->atyp) {
         case IPV4:
+            parser->buf[parser->buf_idx++] = byte;
             if (parser->buf_idx == 4) {
                 memcpy(&parser->dst_addr.ipv4.s_addr, parser->buf, 4);
                 parser->buf_idx = 0;
@@ -119,6 +122,7 @@ ReqState parse_dst_addr(ReqParser * parser, uint8_t byte) {
             }
             break;
         case IPV6:
+            parser->buf[parser->buf_idx++] = byte;
             if (parser->buf_idx == 16) {
                 memcpy(&parser->dst_addr.ipv6.s6_addr, parser->buf, 16);
                 parser->buf_idx = 0;
@@ -126,8 +130,8 @@ ReqState parse_dst_addr(ReqParser * parser, uint8_t byte) {
             }
             break;
         case DOMAINNAME:
+            parser->dst_addr.domainname[parser->buf_idx++] = byte;
             if (parser->buf_idx == parser->dnlen) {
-                memcpy(parser->dst_addr.domainname, parser->buf, parser->dnlen);
                 parser->dst_addr.domainname[parser->dnlen] = '\0'; // Null-terminate
                 parser->buf_idx = 0;
                 return REQ_DST_PORT;
