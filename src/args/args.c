@@ -4,6 +4,7 @@
 #include <string.h>    /* memset */
 #include <errno.h>
 #include <getopt.h>
+#include "../admin/admin.h"
 
 #include "args.h"
 #include "logger.h"
@@ -39,6 +40,8 @@ user(char* s, struct users* user)
         p++;
         user->name = s;
         user->pass = p;
+        admin_add_user(user->name, user->pass);
+
     }
 }
 

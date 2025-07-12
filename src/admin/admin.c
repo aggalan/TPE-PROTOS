@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define LIMIT_USERS 10
 
 static int ensure_file_exists(void) {
     FILE *f = fopen(USER_FILE, "a");
@@ -13,16 +14,18 @@ static int ensure_file_exists(void) {
 int admin_add_user(const char *username, const char *password) {
     if (!username || !password) return -1;
     if (ensure_file_exists() != 0) return -1;
-
+    //check LIMIT 10 users
     FILE *f = fopen(USER_FILE, "r");
     if (!f) return -1;
     char line[512], u[256], p[256];
-    while (fgets(line, sizeof line, f)) {
+    int user_count = 0;
+    while (fgets(line, sizeof line, f) && user_count < LIMIT_USERS) {
         if (sscanf(line, "%255s %255s", u, p) == 2) {
             if (strcmp(u, username) == 0) {
                 fclose(f);
                 return -1;
             }
+            user_count++;
         }
     }
     fclose(f);
