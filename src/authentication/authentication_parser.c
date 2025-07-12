@@ -60,7 +60,7 @@ AuthState authentication_parse(AuthParser *parser, buffer *buffer) {
     while(buffer_can_read(buffer) && parser->state != AUTH_END) {
         parser->state=parse_functions[parser->state](parser,buffer_read(buffer));
     }
-    return parser->state==AUTH_END ? parse_end(parser,0):parser->state;
+    return (parser != NULL && parser->state == AUTH_END) ? AUTH_END : AUTH_ERROR;
 }
 
 AuthState parse_version(AuthParser * parser, uint8_t byte){

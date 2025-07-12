@@ -22,14 +22,10 @@ typedef enum atyp {
     IPV6 = 0x04
 } ReqAtyp;
 
-
 typedef union address {
     struct in_addr ipv4;
     uint8_t domainname[REQ_MAX_DN_LENGHT + 1];
     struct in6_addr ipv6;
-
-
- //   uint8_t bytes[REQ_MAX_DN_LENGHT + 1];
 } ReqAddr;
 
 typedef enum request_state {
@@ -56,7 +52,6 @@ typedef enum request_status {
     REQ_ERROR_ADDRESS_TYPE_NOT_SUPPORTED,
 } ReqStatus;
 
-
 typedef struct request_parser {
     uint8_t version;
     ReqCmd cmd;
@@ -76,16 +71,72 @@ typedef enum request_codes {
     REQ_UNSUPORTED_ATYP,
 } ReqCodes;
 
-const char* request_to_string(const ReqParser * p);
+/**
+ * @brief Converts a request parser to a human-readable string
+ * 
+ * This function creates a string representation of the parsed SOCKS request,
+ * including the command type and destination address.
+ * 
+ * @param p Pointer to the request parser structure
+ * @return A string describing the request (e.g., "Command CONNECT to: 192.168.1.1:80")
+ * @note The returned string is static and will be overwritten on subsequent calls
+ */
+const char* request_to_string(const ReqParser * parser);
 
-void init_request_parser(ReqParser * p);
+/**
+ * @brief Initializes a request parser structure
+ * 
+ * Sets all fields to zero and initializes the parser to the REQ_VERSION state.
+ * This function should be called before parsing any SOCKS request.
+ * 
+ * @param p Pointer to the request parser structure to initialize
+ * @note If p is NULL, the function returns without doing anything
+ */
+void init_request_parser(ReqParser * parser);
 
-ReqState request_parse(ReqParser* p, buffer* buffer);
+/**
+ * @brief Parses SOCKS request data from a buffer
+ * 
+ * This function implements a state machine that parses SOCKS request data
+ * byte by byte. It processes data from the input buffer and updates the
+ * parser state accordingly.
+ * 
+ * @param p Pointer to the request parser structure
+ * @param buffer Pointer to the input buffer containing SOCKS request data
+ * @return Current parsing state (REQ_END on success, REQ_ERROR on failure)
+ * @note The function processes all available data in the buffer
+ */
+ReqState request_parse(ReqParser* parser, buffer* buffer);
 
-bool has_request_read_ended(ReqParser * p);
+/**
+ * @brief Checks if request parsing has completed successfully
+ * 
+ * @param p Pointer to the request parser structure
+ * @return true if parsing has reached the REQ_END state, false otherwise
+ */
+bool has_request_read_ended(ReqParser * parser);
 
-bool has_request_errors(ReqParser * p);
+/**
+ * @brief Checks if request parsing encountered an error
+ * 
+ * @param p Pointer to the request parser structure
+ * @return true if parser is NULL or in REQ_ERROR state, false otherwise
+ */
+bool has_request_errors(ReqParser * parser);
 
-ReqCodes fill_request_answer(ReqParser * p, buffer* buffer, struct selector_key * key);
+/**
+ * @brief Fills a buffer with a SOCKS reply message
+ * 
+ * This function constructs a SOCKS reply message based on the parsed request
+ * and the current connection status. The reply includes the SOCKS version,
+ * status code, reserved byte, address type, and bound address/port.
+ * 
+ * @param p Pointer to the request parser structure
+ * @param buffer Pointer to the output buffer where the reply will be written
+ * @param key Pointer to the selector key containing connection information
+ * @return REQ_OK on success, REQ_FULLBUFFER if buffer is full, REQ_UNSUPORTED_ATYP if address type not supported
+ * @note The function writes the reply in network byte order
+ */
+ReqCodes fill_request_answer(ReqParser * parser, buffer* buffer, struct selector_key * key);
 
 #endif //REQUEST_PARSER_H

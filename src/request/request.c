@@ -292,9 +292,6 @@ unsigned request_read(struct selector_key *key) {
         return ERROR; // Error in recv
     }
 
-
-
-
     metrics_add_bytes(read_count);
 
     buffer_write_adv(&data->read_buffer, read_count);

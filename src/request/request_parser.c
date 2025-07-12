@@ -6,127 +6,164 @@
 #include "../socks5/socks5.h"
 #include "../logging/logger.h"
 
-void init_request_parser(ReqParser *p) {
-    if (p == NULL) return;
-    memset(p, 0, sizeof(ReqParser));
-    p->state = REQ_VERSION;
-    p->status = REQ_SUCCEDED;
-    p->buf_idx = 0;
+typedef ReqState (*parse_character)(ReqParser * parser, uint8_t byte);
+
+static ReqState parse_version(ReqParser* p, uint8_t byte);
+static ReqState parse_cmd(ReqParser* p, uint8_t byte);
+static ReqState parse_rsv(ReqParser* p, uint8_t byte);
+static ReqState parse_atyp(ReqParser* p, uint8_t byte);
+static ReqState parse_dnlen(ReqParser* p, uint8_t byte);
+static ReqState parse_dst_addr(ReqParser* p, uint8_t byte);
+static ReqState parse_dst_port(ReqParser* p, uint8_t byte);
+static ReqState parse_end(ReqParser* p, uint8_t byte);
+
+static parse_character parse_functions[] = {
+    [REQ_VERSION] = (parse_character) parse_version,
+    [REQ_CMD] = (parse_character) parse_cmd,
+    [REQ_RSV] = (parse_character) parse_rsv,
+    [REQ_ATYP] = (parse_character) parse_atyp,
+    [REQ_DNLEN] = (parse_character) parse_dnlen,
+    [REQ_DST_ADDR] = (parse_character) parse_dst_addr,
+    [REQ_DST_PORT] = (parse_character) parse_dst_port,
+    [REQ_ERROR] = (parse_character) parse_end,
+    [REQ_END] = (parse_character) parse_end,
+};
+
+void init_request_parser(ReqParser *parser) {
+    if (parser == NULL) return;
+    memset(parser, 0, sizeof(ReqParser));
+    parser->state = REQ_VERSION;
+    parser->status = REQ_SUCCEDED;
+    parser->buf_idx = 0;
 }
 
-ReqState request_parse(ReqParser* p, buffer* b) {
-    LOG_DEBUG("Starting request parse...\n");
-    if (p == NULL || b == NULL) return REQ_ERROR;
-    while (buffer_can_read(b)) {
-        uint8_t c = buffer_read(b);
-
-        switch (p->state) {
-            case REQ_VERSION:
-                if (c == SOCKS_VERSION) {
-                    p->version = c;
-                    p->state = REQ_CMD;
-                } else {
-                    p->state = REQ_ERROR;
-                    return p->state;
-                }
-                break;
-
-            case REQ_CMD:
-                p->cmd = c;
-                p->state = REQ_RSV;
-                break;
-
-            case REQ_RSV:
-                if (c == 0x00) {
-                    p->state = REQ_ATYP;
-                } else {
-                    p->state = REQ_ERROR;
-                    return p->state;
-                }
-                break;
-
-            case REQ_ATYP:
-                p->atyp = c;
-                switch (p->atyp) {
-                    case IPV4:
-                        p->state = REQ_DST_ADDR;
-                        break;
-                    case DOMAINNAME:
-                        p->state = REQ_DNLEN;
-                        break;
-                    case IPV6:
-                        p->state = REQ_DST_ADDR;
-                        break;
-                    default:
-                        p->state = REQ_ERROR;
-                        return p->state;
-                }
-                break;
-
-            case REQ_DNLEN:
-                if (c == 0) {
-                    p->state = REQ_ERROR;
-                    return p->state;
-                }
-                p->dnlen = c;
-                p->buf_idx = 0;
-                p->state = REQ_DST_ADDR;
-                break;
-
-            case REQ_DST_ADDR:
-                if (p->atyp == IPV4) {
-                    p->buf[p->buf_idx++] = c;
-                    if (p->buf_idx == 4) {
-                        memcpy(&p->dst_addr.ipv4.s_addr, p->buf, 4);
-                        p->buf_idx = 0;
-                        p->state = REQ_DST_PORT;
-                    }
-                } else if (p->atyp == DOMAINNAME) {
-                    p->dst_addr.domainname[p->buf_idx] = c;
-                    p->buf_idx++;
-
-                    if (p->buf_idx == p->dnlen) {
-                        p->dst_addr.domainname[p->dnlen] = '\0';
-                        p->buf_idx = 0;
-                        p->state = REQ_DST_PORT;
-                    }
-                } else if (p->atyp == IPV6) {
-                    p->buf[p->buf_idx++] = c;
-                    if (p->buf_idx == 16) {
-                        memcpy(&p->dst_addr.ipv6.s6_addr, p->buf, 16);
-                        p->buf_idx = 0;
-                        p->state = REQ_DST_PORT;
-                    }
-                }
-                break;
-
-            case REQ_DST_PORT:
-                p->buf[p->buf_idx++] = c;
-                if (p->buf_idx == 2) {
-                    p->dst_port = (p->buf[0] << 8) | p->buf[1];
-                    p->buf_idx = 0;
-                    p->state = REQ_END;
-                    return p->state;
-                }
-                break;
-
-            case REQ_ERROR:
-            case REQ_END:
-                return p->state;
-        }
+ReqState request_parse(ReqParser* parser, buffer* buffer) {
+    LOG_DEBUG("request_parse: Starting request parse...\n");
+    if (parser == NULL || buffer == NULL) return REQ_ERROR;
+    while (buffer_can_read(buffer)) {
+        parser->state=parse_functions[parser->state](parser,buffer_read(buffer));
     }
-    return p->state;
+    return parser->state==REQ_END ? parse_end(parser,0):parser->state;
 }
 
-bool has_request_read_ended(ReqParser *p) {
-    return p != NULL && p->state == REQ_END;
+ReqState parse_version(ReqParser * parser, uint8_t byte) {
+    LOG_DEBUG("parse_version: Parsing byte %d\n", byte);
+    if (byte == SOCKS_VERSION) {
+        LOG_DEBUG("parse_version: SOCKS version %d accepted\n", byte);
+        parser->version = byte;
+        return REQ_CMD;
+    }
+    LOG_ERROR("parse_version: Invalid SOCKS version %d\n", byte);
+    return REQ_ERROR;
 }
 
-bool has_request_errors(ReqParser *p) {
-    return p == NULL || p->state == REQ_ERROR;
+ReqState parse_cmd(ReqParser * parser, uint8_t byte) {
+    LOG_DEBUG("parse_cmd: Parsing command byte %d\n", byte);
+    if (byte >= CONNECT && byte <= UDP_ASSOCIATE) {
+        parser->cmd = byte;
+        return REQ_RSV;
+    }
+    LOG_ERROR("parse_cmd: Unsupported command %d\n", byte);
+    return REQ_ERROR;
 }
 
-ReqCodes fill_request_answer(ReqParser *p, buffer *buffer, struct selector_key * key) {
+ReqState parse_rsv(ReqParser * parser, uint8_t byte) {
+    if(parser->state!= REQ_RSV) {
+        LOG_ERROR("parse_rsv: Invalid state %d for reserved byte %d\n", parser->state, byte);
+        return REQ_ERROR;
+    }
+    LOG_DEBUG("parse_rsv: Parsing reserved byte %d\n", byte);
+    if (byte == 0x00) {
+        return REQ_ATYP;
+    }
+    LOG_ERROR("parse_rsv: Invalid reserved byte %d\n", byte);
+    return REQ_ERROR;
+}
+
+ReqState parse_atyp(ReqParser * parser, uint8_t byte) {
+    LOG_DEBUG("parse_atyp: Parsing address type byte %d\n", byte);
+    switch (byte) {
+        case IPV4:
+        case IPV6:
+            parser->atyp = byte;
+            return REQ_DST_ADDR;
+        case DOMAINNAME:
+            parser->atyp = byte;
+            return REQ_DNLEN;
+        default:
+            LOG_ERROR("parse_atyp: Unsupported address type %d\n", byte);
+            return REQ_ERROR;
+    }
+}
+
+ReqState parse_dnlen(ReqParser * parser, uint8_t byte) {
+    LOG_DEBUG("parse_dnlen: Parsing domain name length byte %d\n", byte);
+    if (byte == 0) {
+        LOG_ERROR("parse_dnlen: Domain name length %d invalid\n", byte);
+        return REQ_ERROR;
+    } 
+    parser->dnlen = byte;
+    parser->buf_idx = 0;
+    return REQ_DST_ADDR;
+}
+
+ReqState parse_dst_addr(ReqParser * parser, uint8_t byte) {
+    LOG_DEBUG("parse_dst_addr: Parsing destination address byte %d\n", byte);
+    parser->buf[parser->buf_idx++] = byte;
+    switch (parser->atyp) {
+        case IPV4:
+            if (parser->buf_idx == 4) {
+                memcpy(&parser->dst_addr.ipv4.s_addr, parser->buf, 4);
+                parser->buf_idx = 0;
+                return REQ_DST_PORT;
+            }
+            break;
+        case IPV6:
+            if (parser->buf_idx == 16) {
+                memcpy(&parser->dst_addr.ipv6.s6_addr, parser->buf, 16);
+                parser->buf_idx = 0;
+                return REQ_DST_PORT;
+            }
+            break;
+        case DOMAINNAME:
+            if (parser->buf_idx == parser->dnlen) {
+                memcpy(parser->dst_addr.domainname, parser->buf, parser->dnlen);
+                parser->dst_addr.domainname[parser->dnlen] = '\0'; // Null-terminate
+                parser->buf_idx = 0;
+                return REQ_DST_PORT;
+            }
+            break;
+        default:
+            LOG_ERROR("parse_dst_addr: Unsupported ATYP %d\n", parser->atyp);
+            return REQ_ERROR;
+    }
+    return REQ_DST_ADDR;
+}
+
+ReqState parse_dst_port(ReqParser * parser, uint8_t byte) {
+    LOG_DEBUG("parse_dst_port: Parsing destination port byte %d\n", byte);
+    parser->buf[parser->buf_idx++] = byte;
+    if (parser->buf_idx == 2) {
+        parser->dst_port = (parser->buf[0] << 8) | parser->buf[1];
+        parser->buf_idx = 0;
+        return REQ_END;
+    }
+    return REQ_DST_PORT;
+}
+
+ReqState parse_end(ReqParser * parser, uint8_t byte) {
+    return (parser != NULL && parser->state == REQ_END && byte==0) ? REQ_END : REQ_ERROR;
+}
+
+bool has_request_read_ended(ReqParser *parser) {
+    return parser != NULL && parser->state == REQ_END;
+}
+
+bool has_request_errors(ReqParser *parser) {
+    return parser == NULL || parser->state == REQ_ERROR;
+}
+
+ReqCodes fill_request_answer(ReqParser *parser, buffer *buffer, struct selector_key * key) {
     if (!buffer_can_write(buffer))
         return REQ_FULLBUFFER;
 
@@ -135,13 +172,13 @@ ReqCodes fill_request_answer(ReqParser *p, buffer *buffer, struct selector_key *
     LOG_DEBUG("Filling request answer...\n");
 
     buffer_write(buffer, 0x05);             // VER
-    buffer_write(buffer, p->status);        // REP
+    buffer_write(buffer, parser->status);        // REP
     buffer_write(buffer, 0x00);             // RSV
 
     // Ahora elegimos qué tipo de dirección mandamos
-    ReqAtyp response_type = p->atyp;
+    ReqAtyp response_type = parser->atyp;
 
-    if (response_type == DOMAINNAME && p->status == REQ_SUCCEDED ) {
+    if (response_type == DOMAINNAME && parser->status == REQ_SUCCEDED ) {
         if (data->origin_resolution->ai_family == AF_INET)
             response_type = IPV4;
         else response_type = IPV6;
@@ -176,36 +213,36 @@ ReqCodes fill_request_answer(ReqParser *p, buffer *buffer, struct selector_key *
     return REQ_OK;
 }
 
-const char* request_to_string(const ReqParser * p) {
+const char* request_to_string(const ReqParser * parser) {
     static char aux[REQ_MAX_DN_LENGHT + 64];
     static char to_string[REQ_MAX_DN_LENGHT];
 
     const char *prefix;
 
-    switch (p->cmd) {
+    switch (parser->cmd) {
         case CONNECT: prefix = "Command CONNECT to:"; break;
         case BIND: prefix = "Command BIND to:"; break;
         case UDP_ASSOCIATE: prefix = "Command UDP_ASSOCIATE to:"; break;
         default: return "unknown unknown";
     }
 
-    switch (p->atyp) {
+    switch (parser->atyp) {
         case IPV4:
-            if (inet_ntop(AF_INET, &p->dst_addr.ipv4, to_string, sizeof(to_string)) == NULL)
+            if (inet_ntop(AF_INET, &parser->dst_addr.ipv4, to_string, sizeof(to_string)) == NULL)
                 strncpy(to_string, "unknown4", sizeof(to_string));
             break;
         case IPV6:
-            if (inet_ntop(AF_INET6, &p->dst_addr.ipv6, to_string, sizeof(to_string)) == NULL)
+            if (inet_ntop(AF_INET6, &parser->dst_addr.ipv6, to_string, sizeof(to_string)) == NULL)
                 strncpy(to_string, "unknown6", sizeof(to_string));
             break;
         case DOMAINNAME:
-            strncpy(to_string, (char*)p->dst_addr.domainname + 1, p->dst_addr.domainname[0]);
-            to_string[p->dst_addr.domainname[0]] = '\0';
+            strncpy(to_string, (char*)parser->dst_addr.domainname + 1, parser->dst_addr.domainname[0]);
+            to_string[parser->dst_addr.domainname[0]] = '\0';
             break;
         default:
             return "unknown unknown";
     }
 
-    snprintf(aux, sizeof(aux), "%s %s %u", prefix, to_string, p->dst_port);
+    snprintf(aux, sizeof(aux), "%s %s %u", prefix, to_string, parser->dst_port);
     return aux;
 }
