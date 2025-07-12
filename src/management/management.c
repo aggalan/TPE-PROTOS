@@ -18,7 +18,7 @@
 
 #define MAX_LINE 512
 #define MAX_UDP_PACKET 1024
-struct socks5args socks5args;
+
 
 typedef int (*cmd_handler_t)(char *args, char **out, size_t *outlen);
 
