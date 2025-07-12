@@ -87,6 +87,8 @@ ReqState parse_atyp(ReqParser * parser, uint8_t byte) {
     LOG_DEBUG("parse_atyp: Parsing address type byte %d\n", byte);
     switch (byte) {
         case IPV4:
+            parser->atyp = IPV4;
+            return REQ_DST_ADDR;
         case IPV6:
             parser->atyp = byte;
             return REQ_DST_ADDR;
@@ -104,7 +106,7 @@ ReqState parse_dnlen(ReqParser * parser, uint8_t byte) {
     if (byte == 0) {
         LOG_ERROR("parse_dnlen: Domain name length %d invalid\n", byte);
         return REQ_ERROR;
-    } 
+    }
     parser->dnlen = byte;
     parser->buf_idx = 0;
     return REQ_DST_ADDR;

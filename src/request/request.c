@@ -15,7 +15,7 @@
 #include <netdb.h>
 #include <sys/fcntl.h>
 #include "../logging/logger.h"
-#include "metrics.h"
+#include "metrics/metrics.h"
 
 
 unsigned request_create_connection(struct selector_key *key);
@@ -74,6 +74,7 @@ unsigned request_setup(struct selector_key *key) {
                 .ai_addr = (struct sockaddr *)addr4,
                 .ai_next = NULL
             };
+            data->current_addr = data->origin_resolution;
             char ipstr[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &addr4->sin_addr, ipstr, sizeof(ipstr));
             LOG_DEBUG("IPV4 setup: [%s]:%d", ipstr, ntohs(addr4->sin_port));
@@ -101,6 +102,7 @@ unsigned request_setup(struct selector_key *key) {
                 .ai_addr = (struct sockaddr *)addr6,
                 .ai_next = NULL
             };
+            data->current_addr = data->origin_resolution;
             char ipstr[INET6_ADDRSTRLEN];
             inet_ntop(AF_INET6, &addr6->sin6_addr, ipstr, sizeof(ipstr));
             LOG_DEBUG("IPV6 setup: [%s]:%d", ipstr, ntohs(addr6->sin6_port));
@@ -206,6 +208,7 @@ void request_connecting_init(const unsigned state,struct selector_key *key) {
 }
 
 unsigned request_connecting(struct selector_key *key) {
+    LOG_INFO("Requesting connecting...\n");
     SocksClient *data = ATTACHMENT(key);
     int error = 0;
     if (getsockopt(data->origin_fd, SOL_SOCKET, SO_ERROR, &error, &(socklen_t){sizeof(int)})) {
@@ -216,12 +219,13 @@ unsigned request_connecting(struct selector_key *key) {
     if (error) {
         if (data->origin_resolution->ai_next == NULL) {
             LOG_INFO( "Failed to fulfill connection request from client %d", data->client_fd);
-            freeaddrinfo(data->origin_resolution); 
+            freeaddrinfo(data->origin_resolution);
             data->origin_resolution = NULL;
             data->current_addr = NULL;
-            return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
+            LOG_INFO("ERROR: %d\n", errno);
+            return request_error(data, key, errno_to_req_status(errno));
         } else {
-            LOG_INFO( "Next attempt at connection request from client %d", data->client_fd);
+            LOG_INFO( "Next attempt at connection request from client %d \n", data->client_fd);
             selector_unregister_fd(key->s, data->origin_fd);
             close(data->origin_fd);
             data->current_addr = data->current_addr->ai_next;
@@ -238,6 +242,16 @@ unsigned request_connecting(struct selector_key *key) {
     return REQUEST_WRITE;
 }
 
+ReqStatus errno_to_req_status(int err) {
+    switch (err) {
+        case ECONNREFUSED:  return REQ_ERROR_CONNECTION_REFUSED;
+        case ENETUNREACH:   return REQ_ERROR_NTW_UNREACHABLE;
+        case EHOSTUNREACH:  return REQ_ERROR_HOST_UNREACHABLE;
+        case ETIMEDOUT:     return REQ_ERROR_TTL_EXPIRED;
+        default:            return REQ_ERROR_GENERAL_FAILURE;
+    }
+}
+
 unsigned request_create_connection(struct selector_key *key) {
     SocksClient * data = ATTACHMENT(key);
     LOG_INFO("Creating socket\n");
@@ -250,7 +264,7 @@ unsigned request_create_connection(struct selector_key *key) {
         NI_NUMERICHOST | NI_NUMERICSERV
     );
     if (r == 0) {
-        LOG_INFO("Trying to connect to %s:%s (Client %d)", host, serv, data->client_fd);
+        LOG_INFO("Trying to connect to %s:%s (Client %d)\n", host, serv, data->client_fd);
     } else {
         LOG_INFO("Trying to connect to [unknown address] (Client %d)", data->client_fd);
     }
@@ -287,11 +301,11 @@ unsigned request_create_connection(struct selector_key *key) {
         close(data->origin_fd);
         struct addrinfo* next = data->origin_resolution->ai_next;
         data->origin_resolution->ai_next = NULL;
-        freeaddrinfo(data->origin_resolution);
+        //freeaddrinfo(data->origin_resolution);
         data->origin_resolution = next;
         return request_create_connection(key);
     }
-    return request_error(data, key, -1);
+    return request_error(data, key, errno_to_req_status(errno));
 }
 
 //@TODO: Mandar cosas aca para no reutilizar codigo!!!!

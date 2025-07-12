@@ -16,5 +16,6 @@ void request_connecting_init(const unsigned state, struct selector_key *key);
 void* request_dns_resolve(void *data);
 unsigned request_resolve_done(struct selector_key *key);
 void request_dns_resolve_init(const unsigned state, struct selector_key *key);
+ReqStatus errno_to_req_status(int err);
 
 #endif //REQUEST_H
