@@ -210,6 +210,23 @@ unsigned request_connecting(struct selector_key *key) {
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
 
+    if (error) {
+        // Could not connect to the first address, try with the next one, if exists
+        if (data->origin_resolution->ai_next == NULL) {
+            LOG_INFO( "Failed to fulfill connection request from client %d", data->client_fd);
+            return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
+        } else {
+            LOG_INFO("Failed to connect to %s:%d, trying next address", data->client.request_parser.dst_addr.domainname, data->client.request_parser.dst_port);
+            selector_unregister_fd(key->s, data->origin_fd);
+            close(data->origin_fd);
+            struct addrinfo* next = data->origin_resolution->ai_next;
+            data->origin_resolution->ai_next = NULL;
+            freeaddrinfo(data->origin_resolution);
+            data->origin_resolution = next;
+            return request_create_connection(key);
+        }
+    }
+
     //mandar la respuesta
     if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser, &data->write_buffer, key)) {
         LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
@@ -252,6 +269,7 @@ unsigned request_create_connection(struct selector_key *key) {
     }
 
     if(data->origin_resolution->ai_next != NULL){
+        LOG_INFO("Attempting connection with Client Number %d\n",data->client_fd);
         selector_unregister_fd(key->s, data->origin_fd); //Unregistereamos el Socket fallido del Selector
         close(data->origin_fd); //Lo Cerramos (duh)
         struct addrinfo *next = data->origin_resolution->ai_next; //Preparamos el proximo
