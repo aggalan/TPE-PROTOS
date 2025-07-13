@@ -19,6 +19,7 @@
 #define MAX_LINE 512
 #define MAX_UDP_PACKET 1024
 
+
 typedef int (*cmd_handler_t)(char *args, char **out, size_t *outlen);
 
 static bool mgmt_is_logged_in = false;
@@ -168,11 +169,6 @@ static int handle_setauth(char *args, char **out, size_t *outlen) {
     }
     return 0;
 }
-
-
-
-
-
 
 
 
