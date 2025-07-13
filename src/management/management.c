@@ -168,6 +168,36 @@ static int handle_setauth(char *args, char **out, size_t *outlen) {
     }
     return 0;
 }
+static int handle_search(char *args, char **out, size_t *outlen){
+    (void)args;
+    char *search = search_access(args);
+    if (!search) return -1;
+    size_t n = snprintf(NULL, 0, "%s\n", search);
+    LOG_DEBUG("Search: %s", search);
+    *out = malloc(n + 1);
+    if (!*out) { free(search); return -1; }
+    snprintf(*out, n + 1, "%s\n", search);
+    *outlen = n;
+    free(search);
+    return 0;
+}
+
+static int handle_clear_logs(char *args, char **out, size_t *outlen){
+    clean_logs();
+    return 0;
+}
+static int handle_dump(char *args, char **out, size_t *outlen){
+    (void)args;
+    char *dump = dump_access(atoi(args));
+    if (!dump) return -1;
+    size_t n = snprintf(NULL, 0, "%s\n", dump);
+    LOG_DEBUG("Dump: %s", search);
+    *out = malloc(n + 1);
+    if (!*out) {  return -1; }
+    snprintf(*out, n + 1, "%s\n", dump);
+    *outlen = n;
+    return 0;
+}
 
 
 
@@ -186,9 +216,9 @@ static struct {
         {"listusers", handle_listusers},
         {"setauth",     handle_setauth},
         {"login",    handle_login},
-        {"dump",    NULL},
-        {"searchlogs", NULL},
-        {"clearlogs", NULL},
+        {"dump",    handle_dump},
+        {"searchlogs", handle_search},
+        {"clearlogs", handle_clear_logs},
         {NULL,         NULL}
 };
 
