@@ -16,6 +16,7 @@
 #include <sys/fcntl.h>
 #include "../logging/logger.h"
 #include "metrics/metrics.h"
+#include "admin_logs.h"
 
 
 unsigned request_create_connection(struct selector_key *key);
@@ -309,14 +310,59 @@ unsigned request_create_connection(struct selector_key *key) {
 }
 
 //@TODO: Mandar cosas aca para no reutilizar codigo!!!!
-unsigned request_error(SocksClient *data, struct selector_key *key, unsigned status){
+unsigned request_error(SocksClient *data,
+                       struct selector_key *key,
+                       unsigned status)
+{
     ReqParser *parser = &data->client.request_parser;
+    if (data->client_username != NULL) {
+
+        char src_ip[INET6_ADDRSTRLEN] = "unknown";
+        uint16_t src_port = 0;
+        struct sockaddr_storage ss; socklen_t slen = sizeof(ss);
+        if (getpeername(data->client_fd, (struct sockaddr *)&ss, &slen) == 0) {
+            if (ss.ss_family == AF_INET) {
+                struct sockaddr_in *sa = (struct sockaddr_in *)&ss;
+                inet_ntop(AF_INET,  &sa->sin_addr,  src_ip, sizeof(src_ip));
+                src_port = ntohs(sa->sin_port);
+            } else {
+                struct sockaddr_in6 *sa = (struct sockaddr_in6 *)&ss;
+                inet_ntop(AF_INET6, &sa->sin6_addr, src_ip, sizeof(src_ip));
+                src_port = ntohs(sa->sin6_port);
+            }
+        }
+
+        char dst[256] = "";
+        uint16_t dst_port = ntohs(parser->dst_port);
+
+        switch (parser->atyp) {
+            case IPV4:
+                inet_ntop(AF_INET,  &parser->dst_addr.ipv4,  dst, sizeof(dst));
+                break;
+            case IPV6:
+                inet_ntop(AF_INET6, &parser->dst_addr.ipv6,  dst, sizeof(dst));
+                break;
+            case DOMAINNAME:
+                memcpy(dst, parser->dst_addr.domainname, parser->dnlen);
+                dst[parser->dnlen] = '\0';
+                break;
+        }
+
+        log_access(data->client_username,
+                   src_ip, src_port,
+                   dst, dst_port,
+                   status);
+        data->access_logged = true;
+        free(data->client_username);
+    }
+
     parser->status = status;
-    parser->state = REQ_ERROR;
+    parser->state  = REQ_ERROR;
     fill_request_answer(parser, &data->write_buffer, key);
     selector_set_interest_key(key, OP_WRITE);
     return REQUEST_WRITE;
 }
+
 
 unsigned request_read(struct selector_key *key) {
     LOG_DEBUG("Starting request read...\n");
@@ -384,6 +430,44 @@ unsigned request_write(struct selector_key *key) {
     if (has_request_errors(&data->client.request_parser)) {
         LOG_ERROR("Request has errors, cannot transition to RELAY");
         return ERROR;
+    }
+    if (!data->access_logged && data->client_username != NULL) {
+        char     src_ip[INET6_ADDRSTRLEN] = "unknown";
+        uint16_t src_port = 0;
+        if (data->client_addr.ss_family == AF_INET) {
+            struct sockaddr_in *sa = (struct sockaddr_in *)&data->client_addr;
+            inet_ntop(AF_INET,  &sa->sin_addr,  src_ip, sizeof(src_ip));
+            src_port = ntohs(sa->sin_port);
+        } else if (data->client_addr.ss_family == AF_INET6) {
+            struct sockaddr_in6 *sa = (struct sockaddr_in6 *)&data->client_addr;
+            inet_ntop(AF_INET6, &sa->sin6_addr, src_ip, sizeof(src_ip));
+            src_port = ntohs(sa->sin6_port);
+        }
+
+        ReqParser *p = &data->client.request_parser;
+        char     dst[256] = "";
+        uint16_t dst_port = ntohs(p->dst_port);
+
+        switch (p->atyp) {
+            case IPV4:
+                inet_ntop(AF_INET,  &p->dst_addr.ipv4,  dst, sizeof(dst));
+                break;
+            case IPV6:
+                inet_ntop(AF_INET6, &p->dst_addr.ipv6,  dst, sizeof(dst));
+                break;
+            case DOMAINNAME:
+                memcpy(dst, p->dst_addr.domainname, p->dnlen);
+                dst[p->dnlen] = '\0';
+                break;
+        }
+
+        log_access(data->client_username,
+                   src_ip, src_port,
+                   dst,    dst_port,
+                   0x00);
+
+        data->access_logged = true;
+        free(data->client_username);
     }
 
     if (selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {

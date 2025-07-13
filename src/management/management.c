@@ -184,6 +184,9 @@ static int handle_search(char *args, char **out, size_t *outlen){
 }
 
 static int handle_clear_logs(char *args, char **out, size_t *outlen){
+    const char *msg = "OK: logs limpiados\n";
+    *out = strdup(msg);
+    *outlen = strlen(msg);
     clean_logs();
     return 0;
 }

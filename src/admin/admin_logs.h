@@ -9,7 +9,7 @@
 
 
 #ifndef ACCESS_LOG_FILE
-#define ACCESS_LOG_FILE  "../admin/access.log"
+#define ACCESS_LOG_FILE  "./src/admin/access.txt"
 #endif
 
 void log_access(const char *user,

@@ -37,6 +37,7 @@ unsigned authentication_read(struct selector_key *key) {
 
     buffer_write_adv(&data->read_buffer, read_count);
     authentication_parse(&data->client.authentication_parser, &data->read_buffer);
+    data->client_username = strdup(data->client.authentication_parser.uname);
     if (has_authentication_read_ended(&data->client.authentication_parser)) {
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_authentication_answer(&data->client.authentication_parser , &data->write_buffer)) {
             LOG_ERROR("Authentication_read selector_set_interest_key failed\n");

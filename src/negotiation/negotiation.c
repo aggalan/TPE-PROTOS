@@ -85,6 +85,7 @@ unsigned negotiation_write(struct selector_key *key) {
         LOG_DEBUG("User has selected USER_PASS authentication\n");
         return AUTHENTICATION_READ;
     }
+    data->client_username = NULL;
 
     LOG_DEBUG("User has selected NO_AUTH authentication\n");
 
