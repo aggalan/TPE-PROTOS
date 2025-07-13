@@ -1,26 +1,26 @@
-#ifndef TPE_PROTOS_ADMIN_LOGS_H
-#define TPE_PROTOS_ADMIN_LOGS_H
+
+#ifndef ACCESS_LOG_H
+#define ACCESS_LOG_H
+
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 
-#define USER_FILE "./src/admin/admin_logs.txt"
+#ifndef ACCESS_LOG_FILE
+#define ACCESS_LOG_FILE  "../admin/access.log"
+#endif
 
-#include <stdint.h>
-#include <stddef.h>
+void log_access(const char *user,
+                const char *src_ip, unsigned src_port,
+                const char *dst,    unsigned dst_port,
+                unsigned status);
 
-void admin_log_record(const char *username,     /* "-" si no hay     */
-                      const char *src_ip, uint16_t src_port,
-                      const char *dst_host, uint16_t dst_port,
-                      const char *stage,        /* "CONNECTED", "AUTH", … */
-                      const char *result,       /* "OK" / "FAIL" / "-"    */
-                      size_t bytes_up, size_t bytes_down,
-                      uint32_t dur_ms);         /* 0 si no aplica        */
+void dump_access(void);
 
-size_t admin_log_tail(char *out, size_t out_sz, size_t max_lines);
+void search_access(const char *user);
 
-size_t admin_log_tail_user(char *out, size_t out_sz,
-                           const char *user, size_t max_lines);
+void clean_logs(void);
 
-void  admin_log_clear(void);
-
-#endif /* ADMIN_LOG_H */
-
+#endif /* ACCESS_LOG_H */

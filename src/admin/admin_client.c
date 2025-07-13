@@ -15,8 +15,8 @@ void help(){
     puts("  deluser <u>       - delete a user\n");
     puts("  setauth <enabled|disabled> - enable or disable authentication\n");
     puts("  login <u> <p>     - authenticate user\n");
-    puts("  logs [lines]      - show last N log entries (default: 50)\n");
-    puts("  searchlogs <user> - search logs for specific term\n");
+    puts("  dump              - dump access logs\n");
+    puts("  searchlogs <u>    - search logs for user <u>\n");
     puts("  clearlogs         - clear all log entries\n");
     puts("  help              - this help\n");
     puts("  exit              - quit client\n");

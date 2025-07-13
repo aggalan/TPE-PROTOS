@@ -169,94 +169,6 @@ static int handle_setauth(char *args, char **out, size_t *outlen) {
     return 0;
 }
 
-static int handle_logs(char *args, char **out, size_t *outlen) {
-    (void)args;
-    size_t max_lines = 50; // Default value
-    if (args) {
-        char *endptr;
-        max_lines = strtoul(args, &endptr, 10);
-        if (*endptr != '\0') {
-            LOG_ERROR("Argumento inválido para logs: %s", args);
-            const char *msg = "ERROR: argumento inválido para logs\n";
-            *out = strdup(msg);
-            *outlen = strlen(msg);
-            return -1;
-        }
-    }
-    char buffer[MAX_LINE];
-    size_t n = admin_log_tail(buffer, sizeof(buffer), max_lines);
-    if (n == 0) {
-        LOG_WARNING("No se pudieron recuperar los registros");
-        const char *msg = "ERROR: no se pudieron recuperar los registros\n";
-        *out = strdup(msg);
-        *outlen = strlen(msg);
-        return -1;
-    }
-    LOG_DEBUG("Registros recuperados: %s", buffer);
-    *out = strdup(buffer);
-    if (!*out) return -1;
-    *outlen = strlen(*out);
-    return 0;
-}
-
-static int handle_searchlogs(char *args, char **out, size_t *outlen) {
-    if (!args) {
-        LOG_ERROR("Argumento requerido para userlogs");
-        const char *msg = "ERROR: uso: userlogs <usuario> [número de líneas]\n";
-        *out = strdup(msg);
-        *outlen = strlen(msg);
-        return -1;
-    }
-
-    char *username = strtok(args, " \t");
-    if (!username) {
-        LOG_ERROR("Nombre de usuario no proporcionado para userlogs");
-        const char *msg = "ERROR: nombre de usuario requerido\n";
-        *out = strdup(msg);
-        *outlen = strlen(msg);
-        return -1;
-    }
-
-    char *lines_arg = strtok(NULL, " \t");
-    size_t max_lines = 50; // Default value
-    if (lines_arg) {
-        char *endptr;
-        max_lines = strtoul(lines_arg, &endptr, 10);
-        if (*endptr != '\0') {
-            LOG_ERROR("Argumento inválido para userlogs: %s", lines_arg);
-            const char *msg = "ERROR: argumento inválido para userlogs\n";
-            *out = strdup(msg);
-            *outlen = strlen(msg);
-            return -1;
-        }
-    }
-
-    char buffer[MAX_LINE];
-    size_t n = admin_log_tail_user(buffer, sizeof(buffer), username, max_lines);
-    if (n == 0) {
-        LOG_WARNING("No se pudieron recuperar los registros del usuario '%s'", username);
-        const char *msg = "ERROR: no se pudieron recuperar los registros del usuario\n";
-        *out = strdup(msg);
-        *outlen = strlen(msg);
-        return -1;
-    }
-    LOG_DEBUG("Registros del usuario '%s' recuperados: %s", username, buffer);
-    *out = strdup(buffer);
-    if (!*out) return -1;
-    *outlen = strlen(*out);
-    return 0;
-}
-
-static int handle_clearlogs(char *args, char **out, size_t *outlen) {
-    (void)args; // No arguments expected
-    admin_log_clear();
-    LOG_DEBUG("Registros borrados");
-    const char *msg = "OK: registros borrados\n";
-    *out = strdup(msg);
-    if (!*out) return -1;
-    *outlen = strlen(msg);
-    return 0;
-}
 
 
 
@@ -272,9 +184,9 @@ static struct {
         {"listusers", handle_listusers},
         {"setauth",     handle_setauth},
         {"login",    handle_login},
-        {"logs",    handle_logs},
-        {"searchlogs", handle_searchlogs},
-        {"clearlogs", handle_clearlogs},
+        {"dump",    NULL},
+        {"searchlogs", NULL},
+        {"clearlogs", NULL},
         {NULL,         NULL}
 };
 
