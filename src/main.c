@@ -29,7 +29,7 @@
 #include "management/management.h"
 
 static bool done = false;
-struct socks5args socks5args;
+//struct socks5args socks5args;
 
 
 static void sigterm_handler(const int signal) {
