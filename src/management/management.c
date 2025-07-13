@@ -174,6 +174,8 @@ static int handle_setauth(char *args, char **out, size_t *outlen) {
 
 
 
+
+
 static struct {
     const char *name;
     cmd_handler_t handler;

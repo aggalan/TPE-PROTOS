@@ -30,19 +30,34 @@ void log_access(const char *user,
     }
     fputs(line, stdout);
 }
-
-void dump_access(void)
+char* dump_access(int n_logs)
 {
+    static char result[10240];
+    static char lines[100][256];
+
     FILE *f = fopen(ACCESS_LOG_FILE, "r");
-    if (f) {
-        char buf[256];
-        while (fgets(buf, sizeof(buf), f))
-            fputs(buf, stdout);
-        fclose(f);
+    if (!f) {
+        return NULL;
     }
+
+    char buf[256];
+    int count = 0;
+
+    while (fgets(buf, sizeof(buf), f) && count < n_logs && count < 100) {
+        strcpy(lines[count], buf);
+        count++;
+    }
+    fclose(f);
+
+    result[0] = '\0';
+    for (int i = 0; i < count; i++) {
+        strcat(result, lines[i]);
+    }
+
+    return result;
 }
 
-void search_access(const char *user)
+char * search_access(const char *user)
 {
     size_t len = strlen(user);
     FILE *f = fopen(ACCESS_LOG_FILE, "r");
@@ -50,9 +65,10 @@ void search_access(const char *user)
         char buf[256];
         while (fgets(buf, sizeof(buf), f))
             if (strncmp(buf + 20, user, len) == 0 && buf[20+len] == '\t')
-                fputs(buf, stdout);
+                return strdup(buf);
         fclose(f);
     }
+    return NULL;
 }
 
 void clean_logs(void)

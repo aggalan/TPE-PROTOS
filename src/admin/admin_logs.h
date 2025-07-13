@@ -17,9 +17,9 @@ void log_access(const char *user,
                 const char *dst,    unsigned dst_port,
                 unsigned status);
 
-void dump_access(void);
+char* dump_access(int n_logs);
 
-void search_access(const char *user);
+char * search_access(const char *user);
 
 void clean_logs(void);
 
