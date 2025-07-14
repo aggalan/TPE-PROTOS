@@ -21,6 +21,6 @@ char* dump_access(int n_logs);
 
 char * search_access(const char *user);
 
-void clean_logs(void);
+int clean_logs(void);
 
 #endif /* ADMIN_LOGS_H */

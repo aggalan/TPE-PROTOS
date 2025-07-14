@@ -12,287 +12,244 @@
 #include <errno.h>
 #include <netinet/in.h>
 
-
-#define MGMT_USER "admin"
-#define MGMT_PASS "secret123"
-
-#define MAX_LINE 512
 #define MAX_UDP_PACKET 1024
+#define MGMT_VERSION    1
 
+// Method codes
+enum {
+    MGMT_LOGIN     = 1,
+    MGMT_STATS     = 2,
+    MGMT_ADDUSER   = 3,
+    MGMT_DELUSER   = 4,
+    MGMT_LISTUSERS = 5,
+    MGMT_SETAUTH   = 6,
+    MGMT_DUMP      = 7,
+    MGMT_SEARCHLOGS= 8,
+    MGMT_CLEARLOGS = 9
+};
 
-typedef int (*cmd_handler_t)(char *args, char **out, size_t *outlen);
+// Status codes
+enum {
+    MGMT_REQ           = 0,
+    MGMT_OK_SIMPLE     = 20,
+    MGMT_OK_WITH_DATA  = 21,
+    MGMT_ERR_SYNTAX    = 40,
+    MGMT_ERR_AUTH      = 41,
+    MGMT_ERR_NOTFOUND  = 42,
+    MGMT_ERR_INTERNAL  = 50
+};
+
+struct mgmt_hdr {
+    uint8_t version;   // Protocol version
+    uint8_t method;    // Command code
+    uint8_t status;    // Status code
+    uint16_t length;   // Payload length (bytes)
+    uint8_t reserved;  // Reserved for future flags
+};
 
 static bool mgmt_is_logged_in = false;
 
+static int send_response(int sockfd, struct sockaddr_in *cli_addr, socklen_t addrlen,
+                         uint8_t method, uint8_t status,
+                         const void *payload, uint16_t payload_len) {
+    uint8_t buf[6 + 1024];
+    if (payload_len > 1024) return -1;
 
-static int handle_login(char *args, char **out, size_t *outlen) {
-    LOG_DEBUG("Login attempt - args: '%s'", args ? args : "NULL");
+    struct mgmt_hdr hdr = {
+            .version = MGMT_VERSION,
+            .method = method,
+            .status = status,
+            .length = htons(payload_len),
+            .reserved = 0
+    };
 
-    if (!args) {
-        LOG_ERROR("Login: No arguments provided");
-        const char *err = "ERROR: use: login <username> <password>\n";
-        *out = strdup(err);
-        *outlen = strlen(err);
-        return -1;
+    memcpy(buf, &hdr, sizeof(hdr));
+    if (payload_len > 0) {
+        memcpy(buf + sizeof(hdr), payload, payload_len);
     }
 
-    char *args_copy = strdup(args);
-    if (!args_copy) {
-        LOG_ERROR("Login: Memory allocation failed");
-        const char *err = "ERROR: internal server error\n";
-        *out = strdup(err);
-        *outlen = strlen(err);
-        return -1;
-    }
-
-    char *username = strtok(args_copy, " \t\n\r");
-    char *password = strtok(NULL, " \t\n\r");
-
-    LOG_DEBUG("Login: username='%s', password='%s'",
-              username ? username : "NULL",
-              password ? password : "NULL");
-
-    if (!username || !password) {
-        LOG_ERROR("Login: Missing username or password");
-        const char *err = "ERROR: user and password missing\n";
-        *out = strdup(err);
-        *outlen = strlen(err);
-        free(args_copy);
-        return -1;
-    }
-
-    LOG_DEBUG("Login: Comparing with MGMT_USER='%s', MGMT_PASS='%s'", MGMT_USER, MGMT_PASS);
-
-    if (strcmp(username, MGMT_USER) == 0 && strcmp(password, MGMT_PASS) == 0) {
-        mgmt_is_logged_in = true;
-        const char *msg = "OK: logged in\n";
-        *out = strdup(msg);
-        if (!*out) {
-            LOG_ERROR("Login: Memory allocation failed for success message");
-            free(args_copy);
-            return -1;
-        }
-        *outlen = strlen(msg);
-        LOG_DEBUG("Administrador autenticado correctamente");
-        free(args_copy);
-        return 0;
-    }
-
-    const char *err = "ERROR: invalid credentials\n";
-    *out = strdup(err);
-    if (!*out) {
-        LOG_ERROR("Login: Memory allocation failed for error message");
-        free(args_copy);
-        return -1;
-    }
-    *outlen = strlen(err);
-    LOG_WARNING("Intento de login fallido (user='%s')", username);
-    free(args_copy);
-    return -1;
+    return sendto(sockfd, buf, sizeof(hdr) + payload_len, 0,
+                  (struct sockaddr*)cli_addr, addrlen);
 }
 
-
-static int handle_stats(char *args, char **out, size_t *outlen) {
-    (void)args;
-    char *stats = metrics_to_string();
-    if (!stats) return -1;
-    LOG_DEBUG("Estadísticas: %s", stats);
-    size_t n = snprintf(NULL, 0, "%s\n", stats);
-    *out = malloc(n + 1);
-    if (!*out) { return -1; }
-    snprintf(*out, n+1, "OK: %s\n", stats);
-    LOG_DEBUG("Estadísticas enviadas: %s", stats);
-    *outlen = n;
-    return 0;
+static void send_simple_response(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                                 uint8_t method, uint8_t status) {
+    send_response(sockfd, cli, addrlen, method, status, NULL, 0);
 }
 
-static int handle_adduser(char *args, char **out, size_t *outlen) {
-    char *username = strtok(args, " \t");
-    char *password = strtok(NULL, " \t");
-    if (!username || !password) return -1;
-    if (admin_add_user(username, password) != 0) return -1;
-    LOG_DEBUG("Usuario '%s' agregado", username);
-    size_t n = snprintf(NULL, 0, "User '%s' Created\n", username);
-    *out = malloc(n + 1);
-    if (!*out) return -1;
-    snprintf(*out, n+1, "OK: User Created, %s\n", username);
-    LOG_DEBUG("Usuario '%s' agregado", username);
-    *outlen = n;
-    return 0;
-}
-
-static int handle_deluser(char *args, char **out, size_t *outlen) {
-    char *username = strtok(args, " \t");
-    if (!username) return -1;
-    if (admin_del_user(username) != 0) return -1;
-    LOG_DEBUG("Usuario '%s' eliminado", username);
-    size_t n = snprintf(NULL, 0, "Usuario '%s' eliminado\n", username);
-    *out = malloc(n + 1);
-    if (!*out) return -1;
-    snprintf(*out, n+1, "OK: User deleted, %s\n", username);
-    LOG_DEBUG("Usuario '%s' eliminado", username);
-    *outlen = n;
-    return 0;
-}
-
-static int handle_listusers(char *args, char **out, size_t *outlen) {
-    (void)args;
-    char *list = admin_list_users();
-    if (!list) return -1;
-    size_t n = snprintf(NULL, 0, "%s\n", list);
-    LOG_DEBUG("Lista de usuarios: %s", list);
-    *out = malloc(n + 1);
-    if (!*out) { free(list); return -1; }
-    snprintf(*out, n+1, "OK: User List,\n %s\n", list);
-    *outlen = n;
-    free(list);
-    return 0;
-}
-
-static int handle_setauth(char *args, char **out, size_t *outlen) {
-    if(strcmp(args, "enabled") == 0) {
-         socks5args.authentication_enabled = true;
-         LOG_DEBUG("Autenticación habilitada");
-        *out = strdup("OK: Auth enabled\n");
-        *outlen = strlen(*out);
-    }
-    else if (strcmp(args, "disabled") == 0) {
-         socks5args.authentication_enabled = false;
-         LOG_DEBUG("Autenticación deshabilitada");
-         *out = strdup("OK: Auth disabled\n");
-         *outlen = strlen(*out);
+static void send_data_response(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                               uint8_t method, const char *data) {
+    if (data) {
+        send_response(sockfd, cli, addrlen, method, MGMT_OK_WITH_DATA, data, strlen(data));
     } else {
-        LOG_ERROR("Comando setauth inválido: %s", args);
-        const char *msg = "ERROR: invalid setauth command\n";
-        *out = strdup(msg);
-        *outlen = strlen(msg);
+        send_simple_response(sockfd, cli, addrlen, method, MGMT_ERR_INTERNAL);
     }
-    return 0;
-}
-static int handle_search(char *args, char **out, size_t *outlen){
-    (void)args;
-    char *search = search_access(args);
-    if (!search) return -1;
-    size_t n = snprintf(NULL, 0, "%s\n", search);
-    LOG_DEBUG("Search: %s", search);
-    *out = malloc(n + 1);
-    if (!*out) { free(search); return -1; }
-    snprintf(*out, n+1, "OK: serach, %s\n", search);
-    *outlen = n;
-    free(search);
-    return 0;
 }
 
-static int handle_clear_logs(char *args, char **out, size_t *outlen){
-    const char *msg = "OK: logs cleaned\n";
-    *out = strdup(msg);
-    *outlen = strlen(msg);
-    clean_logs();
-    return 0;
+static bool parse_user_pass(const char *args, char *user, char *pass, size_t buf_size) {
+    if (!args) return false;
+
+    char fmt[32];
+    snprintf(fmt, sizeof(fmt), "%%%zus %%%zus", buf_size - 1, buf_size - 1);
+    return sscanf(args, fmt, user, pass) == 2;
 }
-static int handle_dump(char *args, char **out, size_t *outlen){
-    (void)args;
-    char *dump = dump_access(atoi(args));
-    if (!dump) return -1;
-    size_t n = snprintf(NULL, 0, "%s\n", dump);
-    LOG_DEBUG("Dump: %s", search);
-    *out = malloc(n + 1);
-    if (!*out) {
-        return -1;
+
+// Helper to check authentication for all commands except login
+static bool check_auth_and_respond(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                                   uint8_t method) {
+    if (!mgmt_is_logged_in) {
+        send_simple_response(sockfd, cli, addrlen, method, MGMT_ERR_AUTH);
+        return false;
     }
-    snprintf(*out, n+1, "OK: dump, %s\n", dump);
-    *outlen = n;
-    return 0;
+    return true;
 }
 
+// Command handlers
+static void handle_login(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                         const char *args) {
+    if (mgmt_is_logged_in) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_LOGIN, MGMT_ERR_AUTH);
+        return;
+    }
 
+    char user[64], pass[64];
+    if (!parse_user_pass(args, user, pass, sizeof(user))) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_LOGIN, MGMT_ERR_SYNTAX);
+        return;
+    }
 
-static struct {
-    const char *name;
+    if (strcmp(user, "admin") == 0 && strcmp(pass, "secret123") == 0) {
+        mgmt_is_logged_in = true;
+        send_simple_response(sockfd, cli, addrlen, MGMT_LOGIN, MGMT_OK_SIMPLE);
+    } else {
+        send_simple_response(sockfd, cli, addrlen, MGMT_LOGIN, MGMT_ERR_AUTH);
+    }
+}
+
+static void handle_stats(int sockfd, struct sockaddr_in *cli, socklen_t addrlen) {
+    char *stats = metrics_to_string();
+    send_data_response(sockfd, cli, addrlen, MGMT_STATS, stats);
+    free(stats);
+}
+
+static void handle_adduser(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                           const char *args) {
+    char user[64], pass[64];
+    if (!parse_user_pass(args, user, pass, sizeof(user))) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_ADDUSER, MGMT_ERR_SYNTAX);
+        return;
+    }
+
+    uint8_t status = (admin_add_user(user, pass) == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_INTERNAL;
+    send_simple_response(sockfd, cli, addrlen, MGMT_ADDUSER, status);
+}
+
+static void handle_deluser(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                           const char *args) {
+    if (!args || strlen(args) == 0) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_DELUSER, MGMT_ERR_SYNTAX);
+        return;
+    }
+
+    uint8_t status = (admin_del_user(args) == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_NOTFOUND;
+    send_simple_response(sockfd, cli, addrlen, MGMT_DELUSER, status);
+}
+
+static void handle_listusers(int sockfd, struct sockaddr_in *cli, socklen_t addrlen) {
+    char *users = admin_list_users();
+    send_data_response(sockfd, cli, addrlen, MGMT_LISTUSERS, users);
+    free(users);
+}
+
+static void handle_setauth(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                           const char *args) {
+    if (!args || strlen(args) == 0) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_SETAUTH, MGMT_ERR_SYNTAX);
+        return;
+    }
+
+    LOG_INFO("Setting new auth method: %s", args);
+    send_simple_response(sockfd, cli, addrlen, MGMT_SETAUTH, MGMT_OK_SIMPLE);
+}
+
+static void handle_dump(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                        const char *args) {
+    if (args && strlen(args) > 0) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_DUMP, MGMT_ERR_SYNTAX);
+        return;
+    }
+
+    int param = (args && strlen(args) > 0) ? atoi(args) : 0;
+    char *dump = dump_access(param);
+    send_data_response(sockfd, cli, addrlen, MGMT_DUMP, dump);
+    free(dump);
+}
+
+static void handle_searchlogs(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                              const char *args) {
+    if (!args || strlen(args) == 0) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_SEARCHLOGS, MGMT_ERR_SYNTAX);
+        return;
+    }
+
+    char *results = search_access(args);
+    send_data_response(sockfd, cli, addrlen, MGMT_SEARCHLOGS, results);
+    free(results);
+}
+
+static void handle_clearlogs(int sockfd, struct sockaddr_in *cli, socklen_t addrlen) {
+    uint8_t status = (clean_logs() == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_INTERNAL;
+    send_simple_response(sockfd, cli, addrlen, MGMT_CLEARLOGS, status);
+}
+
+typedef void (*cmd_handler_t)(int sockfd, struct sockaddr_in *cli, socklen_t addrlen, const char *args);
+
+struct command_info {
+    uint8_t method;
     cmd_handler_t handler;
-} commands[] = {
-        {"stats",     handle_stats},
-        {"adduser",   handle_adduser},
-        {"deluser",   handle_deluser},
-        {"listusers", handle_listusers},
-        {"setauth",     handle_setauth},
-        {"login",    handle_login},
-        {"dump",    handle_dump},
-        {"searchlogs", handle_search},
-        {"clearlogs", handle_clear_logs},
-        {NULL,         NULL}
+    bool needs_auth;
+    bool has_args;
 };
 
+static void cmd_wrapper_no_args(int sockfd, struct sockaddr_in *cli, socklen_t addrlen, const char *args) {
+    (void)args;
+}
 
-static int process_udp_command(char *command, char **out, size_t *outlen) {
-    LOG_DEBUG("Processing command: '%s'", command);
+static const struct command_info commands[] = {
+        {MGMT_LOGIN,     handle_login,     false, true},
+        {MGMT_STATS,     (cmd_handler_t)handle_stats,     true,  false},
+        {MGMT_ADDUSER,   handle_adduser,   true,  true},
+        {MGMT_DELUSER,   handle_deluser,   true,  true},
+        {MGMT_LISTUSERS, (cmd_handler_t)handle_listusers, true,  false},
+        {MGMT_SETAUTH,   handle_setauth,   true,  true},
+        {MGMT_DUMP,      handle_dump,      true,  true},
+        {MGMT_SEARCHLOGS, handle_searchlogs, true, true},
+        {MGMT_CLEARLOGS, (cmd_handler_t)handle_clearlogs, true,  false},
+};
 
-    char *eol = strchr(command, '\n');
-    if (eol) *eol = '\0';
+static const size_t num_commands = sizeof(commands) / sizeof(commands[0]);
 
-    eol = strchr(command, '\r');
-    if (eol) *eol = '\0';
-
-    char *cmd_copy = strdup(command);
-    if (!cmd_copy) {
-        LOG_ERROR("Memory allocation failed for command copy");
-        const char *msg = "ERROR: internal server error\n";
-        *out = strdup(msg);
-        *outlen = strlen(msg);
-        return -1;
-    }
-
-    char *cmd = strtok(cmd_copy, " \t");
-    char *args = strtok(NULL, "");
-
-    LOG_DEBUG("Parsed command: cmd='%s', args='%s', logged_in=%d",
-              cmd ? cmd : "NULL",
-              args ? args : "NULL",
-              mgmt_is_logged_in);
-
-    if (!mgmt_is_logged_in && (!cmd || strcmp(cmd, "login") != 0)) {
-        const char *msg = "ERROR: login with 'login <user> <pass>'\n";
-        *out = strdup(msg);
-        *outlen = strlen(msg);
-        LOG_WARNING("Comando '%s' failed: not authenticated", cmd ? cmd : "NULL");
-        free(cmd_copy);
-        return -1;
-    }
-
-    char *response = NULL;
-    size_t response_len = 0;
-    int rc = -1;
-
-    if (cmd) {
-        for (int i = 0; commands[i].name; i++) {
-            if (strcmp(cmd, commands[i].name) == 0) {
-                if (commands[i].handler) {
-                    LOG_DEBUG("Executing handler for command '%s'", cmd);
-                    rc = commands[i].handler(args, &response, &response_len);
-                } else {
-                    LOG_ERROR("No handler for command '%s'", cmd);
-                }
-                break;
-            }
+void process_udp_command(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                         uint8_t method, const char *args) {
+    const struct command_info *cmd = NULL;
+    for (size_t i = 0; i < num_commands; i++) {
+        if (commands[i].method == method) {
+            cmd = &commands[i];
+            break;
         }
     }
 
-    if (rc == 0 && response) {
-        LOG_DEBUG("Command '%s' processed successfully", cmd);
-        *out = response;
-        *outlen = response_len;
-    } else {
-        LOG_ERROR("Command '%s' failed or unrecognized (rc=%d)", cmd ? cmd : "NULL", rc);
-        if (response) free(response);
-        const char *msg = "ERROR: invalid command or internal error\n";
-        *out = strdup(msg);
-        *outlen = strlen(msg);
+    if (!cmd) {
+        send_simple_response(sockfd, cli, addrlen, method, MGMT_ERR_NOTFOUND);
+        return;
     }
 
-    free(cmd_copy);
-    return rc;
-}
+    if (cmd->needs_auth && !check_auth_and_respond(sockfd, cli, addrlen, method)) {
+        return;
+    }
 
+    cmd->handler(sockfd, cli, addrlen, args);
+}
 
 void mgmt_udp_handle(struct selector_key *key) {
     LOG_DEBUG("Received UDP management packet on fd %d", key->fd);
@@ -312,20 +269,5 @@ void mgmt_udp_handle(struct selector_key *key) {
     buffer[n] = '\0';
     LOG_DEBUG("Received UDP command: %s", buffer);
 
-    char *response = NULL;
-    size_t response_len = 0;
-    process_udp_command(buffer, &response, &response_len);
-
-    if (response && response_len > 0) {
-        ssize_t sent = sendto(key->fd, response, response_len, 0,
-                              (struct sockaddr*)&client_addr, client_len);
-        if (sent < 0) {
-            LOG_ERROR("Error sending UDP response: %s", strerror(errno));
-        } else if ((size_t)sent != response_len) {
-            LOG_WARNING("UDP response truncated: sent %zd of %zu bytes", sent, response_len);
-        } else {
-            LOG_DEBUG("UDP response sent successfully (%zu bytes)", response_len);
-        }
-        free(response);
-    }
+    process_udp_command(key->fd, &client_addr, client_len, buffer[0], buffer + 1);
 }

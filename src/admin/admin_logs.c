@@ -90,10 +90,12 @@ char *search_access(const char *user)
 }
 
 
-void clean_logs(void)
+int clean_logs(void)
 {
     FILE *f = fopen(ACCESS_LOG_FILE, "w");
     if (f) {
         fclose(f);
+        return 0; // Success
     }
+    return -1; // Error
 }
