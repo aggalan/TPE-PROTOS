@@ -4,7 +4,7 @@
 void relay_init(const unsigned state, struct selector_key *key) {
     LOG_DEBUG("Creating relay...\n");
     if(state!=(unsigned int)8){
-        LOG_ERROR("[Relay]: Initiated with an invalid state: %u\n", state);
+        LOG_DEBUG("[Relay]: Initiated with an invalid state: %u\n", state);
         return;
     }
     buffer_reset(&ATTACHMENT(key)->read_buffer);

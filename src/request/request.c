@@ -26,7 +26,7 @@ void* request_dns_resolve(void *data);
 
 void request_init(const unsigned state,struct selector_key * key) {
     if(state != REQUEST_READ) {
-        LOG_ERROR("Request initialized with an invalid state: %u\n", state);
+        LOG_DEBUG("Request initialized with an invalid state: %u\n", state);
         return;
     }
     LOG_DEBUG("Creating request...\n");
@@ -46,7 +46,7 @@ unsigned request_setup(struct selector_key *key) {
 
     struct sockaddr_storage *dest_addr = malloc(sizeof(struct sockaddr_storage));
     if (!dest_addr) {
-        LOG_ERROR("Failed to allocate dest_addr");
+        LOG_DEBUG("Failed to allocate dest_addr");
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
     memset(dest_addr, 0, sizeof(struct sockaddr_storage));
@@ -63,7 +63,7 @@ unsigned request_setup(struct selector_key *key) {
             };
             data->origin_resolution = malloc(sizeof(struct addrinfo));
             if (!data->origin_resolution) {
-                LOG_ERROR("Failed to allocate origin_resolution");
+                LOG_DEBUG("Failed to allocate origin_resolution");
                 free(dest_addr);
                 return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
             }
@@ -91,7 +91,7 @@ unsigned request_setup(struct selector_key *key) {
             };
             data->origin_resolution = malloc(sizeof(struct addrinfo));
             if (!data->origin_resolution) {
-                LOG_ERROR("Failed to allocate origin_resolution");
+                LOG_DEBUG("Failed to allocate origin_resolution");
                 free(dest_addr);
                 return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
             }
@@ -114,19 +114,19 @@ unsigned request_setup(struct selector_key *key) {
             pthread_t dns_thread;
             struct selector_key *key_copy = malloc(sizeof(*key));
             if (!key_copy) {
-                LOG_ERROR("Failed to allocate key_copy for DNS thread");
+                LOG_DEBUG("Failed to allocate key_copy for DNS thread");
                 free(dest_addr);
                 return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
             }
             memcpy(key_copy, key, sizeof(*key));
             if (selector_set_interest_key(key, OP_NOOP) != SELECTOR_SUCCESS) {
-                LOG_ERROR("Failed to set interest OP_NOOP for DNS resolve");
+                LOG_DEBUG("Failed to set interest OP_NOOP for DNS resolve");
                 free(key_copy);
                 free(dest_addr);
                 return ERROR;
             }
             if (pthread_create(&dns_thread, NULL, request_dns_resolve, key_copy) != 0) {
-                LOG_ERROR("Failed to create DNS resolution thread");
+                LOG_DEBUG("Failed to create DNS resolution thread");
                 free(key_copy);
                 free(dest_addr);
                 return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
@@ -135,7 +135,7 @@ unsigned request_setup(struct selector_key *key) {
             break;
         }
         default: {
-            LOG_ERROR("Unsupported address type %d", atyp);
+            LOG_DEBUG("Unsupported address type %d", atyp);
             parser->status = REQ_ERROR_ADDRESS_TYPE_NOT_SUPPORTED;
             fill_request_answer(parser, &data->write_buffer, key);
             selector_set_interest_key(key, OP_WRITE);
@@ -143,7 +143,7 @@ unsigned request_setup(struct selector_key *key) {
             return REQUEST_WRITE;
         }
     }
-    LOG_ERROR("Unexpected path in request_setup (atyp=%d)", atyp);
+    LOG_DEBUG("Unexpected path in request_setup (atyp=%d)", atyp);
     return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
 }
 
@@ -171,7 +171,7 @@ void* request_dns_resolve(void *data) {
     int err = getaddrinfo((char *)socks->client.request_parser.dst_addr.domainname, service, &hints, &socks->origin_resolution);
     LOG_DEBUG("ERROR: %d\n", err);
     if (err != 0) {
-        LOG_ERROR("DNS resolution failed for %s:%d: %s", socks->client.request_parser.dst_addr.domainname, socks->client.request_parser.dst_port, gai_strerror(err));
+        LOG_DEBUG("DNS resolution failed for %s:%d: %s", socks->client.request_parser.dst_addr.domainname, socks->client.request_parser.dst_port, gai_strerror(err));
         socks->origin_resolution = NULL;
         socks->current_addr = NULL;
     } else {
@@ -197,11 +197,11 @@ unsigned request_resolve_done(struct selector_key *key) {
 void request_connecting_init(const unsigned state,struct selector_key *key) {
     LOG_DEBUG("Starting connection...\n");
     if(key == NULL) {
-        LOG_ERROR("Key is NULL in request_connecting_init\n");
+        LOG_DEBUG("Key is NULL in request_connecting_init\n");
         return;
     }
     if(state!=REQUEST_CONNECTING && state!=REQUEST_RESOLVE) {
-        LOG_ERROR("Request connecting initialized with an invalid state: %u\n", state);
+        LOG_DEBUG("Request connecting initialized with an invalid state: %u\n", state);
         return;
     }
 }
@@ -211,7 +211,7 @@ unsigned request_connecting(struct selector_key *key) {
     SocksClient *data = ATTACHMENT(key);
     int error = 0;
     if (getsockopt(data->origin_fd, SOL_SOCKET, SO_ERROR, &error, &(socklen_t){sizeof(int)})) {
-        LOG_ERROR("Failed to get socket options for origin fd %d\n", data->origin_fd);
+        LOG_DEBUG("Failed to get socket options for origin fd %d\n", data->origin_fd);
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
 
@@ -233,7 +233,7 @@ unsigned request_connecting(struct selector_key *key) {
     }
 
     if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser, &data->write_buffer, key)) {
-        LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
+        LOG_DEBUG("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
     LOG_DEBUG("The connection was established!\n");
@@ -279,12 +279,12 @@ unsigned request_create_connection(struct selector_key *key) {
 
     if(connect(data->origin_fd, data->origin_resolution->ai_addr, data->current_addr->ai_addrlen) == 0 || errno == EINPROGRESS){
         if (selector_register(key->s, data->origin_fd, get_fd_handler() , OP_WRITE, data) != SELECTOR_SUCCESS) {
-            LOG_ERROR("Failed to register origin fd %d in selector\n", data->origin_fd);
+            LOG_DEBUG("Failed to register origin fd %d in selector\n", data->origin_fd);
             close(data->origin_fd);
             return ERROR;
         }
         if (selector_set_interest_key(key,OP_NOOP) != SELECTOR_SUCCESS) {
-            LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
+            LOG_DEBUG("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
             return ERROR;
         }
 
@@ -373,7 +373,7 @@ unsigned request_read(struct selector_key *key) {
         return DONE; // Client closed connection
     }
     if (read_count < 0) {
-        LOG_ERROR("recv error: %s", strerror(errno));
+        LOG_DEBUG("recv error: %s", strerror(errno));
         return ERROR; // Error in recv
     }
 
@@ -388,7 +388,7 @@ unsigned request_read(struct selector_key *key) {
             return request_setup(key);
         }
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
-            LOG_ERROR("No methods allowed or selector error\n");
+            LOG_DEBUG("No methods allowed or selector error\n");
             return ERROR;
         }
         return request_error(data, key, data->client.request_parser.status);
@@ -418,12 +418,12 @@ unsigned request_write(struct selector_key *key) {
 
     // ADD THIS VALIDATION BEFORE TRANSITIONING TO RELAY
     if (data->origin_fd == -1) {
-        LOG_ERROR("Cannot transition to RELAY: origin connection not established");
+        LOG_DEBUG("Cannot transition to RELAY: origin connection not established");
         return ERROR;
     }
 
     if (has_request_errors(&data->client.request_parser)) {
-        LOG_ERROR("Request has errors, cannot transition to RELAY");
+        LOG_DEBUG("Request has errors, cannot transition to RELAY");
         return ERROR;
     }
     if (!data->access_logged && data->client_username != NULL) {
@@ -466,7 +466,7 @@ unsigned request_write(struct selector_key *key) {
     }
 
     if (selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
-        LOG_ERROR("Failed to set interest for RELAY state");
+        LOG_DEBUG("Failed to set interest for RELAY state");
         return ERROR;
     }
 

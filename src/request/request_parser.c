@@ -56,7 +56,7 @@ ReqState parse_version(ReqParser * parser, uint8_t byte) {
         parser->version = byte;
         return REQ_CMD;
     }
-    LOG_ERROR("parse_version: Invalid SOCKS version %d\n", byte);
+    LOG_DEBUG("parse_version: Invalid SOCKS version %d\n", byte);
     return REQ_ERROR;
 }
 
@@ -66,21 +66,21 @@ ReqState parse_cmd(ReqParser * parser, uint8_t byte) {
         parser->cmd = byte;
         return REQ_RSV;
     }
-    LOG_ERROR("parse_cmd: Unsupported command %d\n", byte);
+    LOG_DEBUG("parse_cmd: Unsupported command %d\n", byte);
     parser->status = REQ_ERROR_COMMAND_NOT_SUPPORTED;
     return REQ_ERROR;
 }
 
 ReqState parse_rsv(ReqParser * parser, uint8_t byte) {
     if(parser->state!= REQ_RSV) {
-        LOG_ERROR("parse_rsv: Invalid state %d for reserved byte %d\n", parser->state, byte);
+        LOG_DEBUG("parse_rsv: Invalid state %d for reserved byte %d\n", parser->state, byte);
         return REQ_ERROR;
     }
     LOG_DEBUG("parse_rsv: Parsing reserved byte %d\n", byte);
     if (byte == 0x00) {
         return REQ_ATYP;
     }
-    LOG_ERROR("parse_rsv: Invalid reserved byte %d\n", byte);
+    LOG_DEBUG("parse_rsv: Invalid reserved byte %d\n", byte);
     return REQ_ERROR;
 }
 
@@ -97,7 +97,7 @@ ReqState parse_atyp(ReqParser * parser, uint8_t byte) {
             parser->atyp = byte;
             return REQ_DNLEN;
         default:
-            LOG_ERROR("parse_atyp: Unsupported address type %d\n", byte);
+            LOG_DEBUG("parse_atyp: Unsupported address type %d\n", byte);
             return REQ_ERROR;
     }
 }
@@ -105,7 +105,7 @@ ReqState parse_atyp(ReqParser * parser, uint8_t byte) {
 ReqState parse_dnlen(ReqParser * parser, uint8_t byte) {
     LOG_DEBUG("parse_dnlen: Parsing domain name length byte %d\n", byte);
     if (byte == 0) {
-        LOG_ERROR("parse_dnlen: Domain name length %d invalid\n", byte);
+        LOG_DEBUG("parse_dnlen: Domain name length %d invalid\n", byte);
         return REQ_ERROR;
     }
     parser->dnlen = byte;
@@ -141,7 +141,7 @@ ReqState parse_dst_addr(ReqParser * parser, uint8_t byte) {
             }
             break;
         default:
-            LOG_ERROR("parse_dst_addr: Unsupported ATYP %d\n", parser->atyp);
+            LOG_DEBUG("parse_dst_addr: Unsupported ATYP %d\n", parser->atyp);
             return REQ_ERROR;
     }
     return REQ_DST_ADDR;
@@ -215,7 +215,7 @@ ReqCodes fill_request_answer(ReqParser *parser, buffer *buffer, struct selector_
         }
 
         default:
-            LOG_ERROR("Unsupported ATYP %d in fill_request_answer", response_type);
+            LOG_DEBUG("Unsupported ATYP %d in fill_request_answer", response_type);
             return REQ_UNSUPORTED_ATYP;
     }
 

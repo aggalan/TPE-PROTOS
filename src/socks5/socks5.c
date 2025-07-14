@@ -267,7 +267,7 @@ void _closeConnection(struct selector_key *key)
 void socksv5_done(const unsigned state, struct selector_key * key)
 {
     if(state!=DONE){
-        LOG_ERROR("socksv5_done called with unexpected state: %u\n", state);
+        LOG_DEBUG("socksv5_done called with unexpected state: %u\n", state);
     }
     LOG_DEBUG("Socks DONE...\n");
     const int fds[] = {
@@ -289,7 +289,7 @@ void socksv5_done(const unsigned state, struct selector_key * key)
 }
 
 void socksv5_error(const unsigned state, struct selector_key * key){
-    LOG_ERROR("Socks error (state: %u)\n", state);
+    LOG_DEBUG("Socks error (state: %u)\n", state);
     metrics_closed_connection();
     
     if (key != NULL && ATTACHMENT(key) != NULL) {

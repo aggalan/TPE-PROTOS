@@ -9,7 +9,7 @@
 
 void authentication_init(const unsigned state, struct selector_key *key) {
     if(state!=AUTHENTICATION_READ ){
-        LOG_ERROR("[Authentication]: Initiated with an invalid state: %u\n", state);
+        LOG_DEBUG("[Authentication]: Initiated with an invalid state: %u\n", state);
         return;
     }    
     LOG_DEBUG("Creating authentication...\n");
@@ -29,7 +29,7 @@ unsigned authentication_read(struct selector_key *key) {
     uint8_t *read_buffer = buffer_write_ptr(&data->read_buffer, &read_size);
     ssize_t read_count = recv(key->fd, read_buffer, read_size, 0);
     if (read_count <= 0) {
-        LOG_ERROR("Authentication_read read error\n");
+        LOG_DEBUG("Authentication_read read error\n");
         return ERROR;
     }
 
@@ -40,7 +40,7 @@ unsigned authentication_read(struct selector_key *key) {
     data->client_username = strdup(data->client.authentication_parser.uname);
     if (has_authentication_read_ended(&data->client.authentication_parser)) {
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_authentication_answer(&data->client.authentication_parser , &data->write_buffer)) {
-            LOG_ERROR("Authentication_read selector_set_interest_key failed\n");
+            LOG_DEBUG("Authentication_read selector_set_interest_key failed\n");
             return ERROR;
         }
         LOG_DEBUG("Parsed authentication successfully\n");
@@ -57,7 +57,7 @@ unsigned authentication_write(struct selector_key *key) {
     uint8_t *write_ptr = buffer_read_ptr(&data->write_buffer, &write_size);
     ssize_t  n = send(key->fd, write_ptr, write_size, MSG_NOSIGNAL);
     if (n <= 0) {
-        LOG_ERROR("Authentication_write send error: %s", strerror(errno));
+        LOG_DEBUG("Authentication_write send error: %s", strerror(errno));
         perror("authentication_write/send");
         return ERROR;
     }
