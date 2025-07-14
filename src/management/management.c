@@ -4,6 +4,7 @@
 #include "../args/args.h"
 #include "../logging/logger.h"
 #include "../admin/admin_logs.h"
+#include "socks5.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -219,6 +220,23 @@ static void handle_setauth(int sockfd, struct sockaddr_in *cli, socklen_t addrle
         send_simple_response(sockfd, cli, addrlen, MGMT_SETAUTH, MGMT_ERR_SYNTAX);
     }
 }
+static void handle_setbuff(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                           const char *args) {
+    if (!args || strlen(args) == 0) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_SETBUFFER, MGMT_ERR_SYNTAX);
+        return;
+    }
+    int new_size = atoi(args);
+    if (new_size <= 0 || new_size > BUFFER_SIZE) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_SETBUFFER, MGMT_ERR_SYNTAX);
+        return;
+    }
+    socks5args.buffer_size = new_size;
+    send_simple_response(sockfd, cli, addrlen, MGMT_SETBUFFER, MGMT_OK_SIMPLE);
+
+
+
+}
 
 
 static void handle_dump(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
@@ -276,6 +294,7 @@ static const struct command_info commands[] = {
         {MGMT_ADDADMIN,   handle_addadmins, true,  true},
         {MGMT_DELADMIN,   handle_deladmins, true,  true},
         {MGMT_LISTADMINS, (cmd_handler_t)handle_listadmins, true,  false},
+        {MGMT_SETBUFFER, handle_setbuff, true,  true},
 };
 
 static const size_t num_commands = sizeof(commands) / sizeof(commands[0]);
@@ -327,7 +346,7 @@ void mgmt_udp_handle(struct selector_key *key) {
     hdr.version  = buffer[0];
     hdr.method   = buffer[1];
     hdr.status   = buffer[2];
-    hdr.length   = ((uint16_t)buffer[3] << 8) | buffer[4];  // network to host order (big endian)
+    hdr.length   = ((uint16_t)buffer[3] << 8) | buffer[4];
     hdr.reserved = buffer[5];
 
     if (hdr.version != MGMT_VERSION) {
@@ -344,7 +363,7 @@ void mgmt_udp_handle(struct selector_key *key) {
     char payload[MAX_UDP_PACKET] = {0};
     if (payload_len > 0) {
         memcpy(payload, buffer + 6, payload_len);
-        payload[payload_len] = '\0';  // para usar como string
+        payload[payload_len] = '\0';
     }
 
     process_udp_command(key->fd, &client_addr, client_len, hdr.method, payload);

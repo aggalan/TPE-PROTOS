@@ -95,6 +95,7 @@ int main(const int argc, const char** argv) {
              socks5args.socks_addr, socks5args.socks_port,
              socks5args.mng_addr,    socks5args.mng_port);
     socks5args.authentication_enabled = false;
+    socks5args.buffer_size = BUFFER_SIZE; // Default buffer size
     signal(SIGTERM, sigterm_handler);
     signal(SIGINT,  sigterm_handler);
 

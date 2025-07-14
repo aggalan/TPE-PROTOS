@@ -22,6 +22,7 @@ struct socks5args
 
     bool disectors_enabled;
     bool authentication_enabled;
+    int buffer_size;
 
     struct users users[MAX_USERS];
     struct users admins[MAX_ADMINS];

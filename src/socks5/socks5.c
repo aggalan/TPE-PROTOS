@@ -20,9 +20,9 @@
 #include "../negotiation/negotiation.h"
 #include "../authentication/authentication.h"
 #include "../request/request.h"
+#include "args.h"
 
 
-#define BUFFER_SIZE 4096
 #define FD_UPPER_LIMIT 1024
 #define ERROR_CODE -1
 
@@ -122,8 +122,8 @@ SocksClient *socks5_new(const int client_fd, const struct sockaddr_storage *clie
     ret->client_addr = *client_addr;
     ret->client_addr_len = client_addr_len;
     ret->closed = false;
-    buffer_init(&ret->read_buffer, BUFFER_SIZE, ret->read_buffer_space);
-    buffer_init(&ret->write_buffer, BUFFER_SIZE, ret->write_buffer_space);
+    buffer_init(&ret->read_buffer, socks5args.buffer_size, ret->read_buffer_space);
+    buffer_init(&ret->write_buffer, socks5args.buffer_size, ret->write_buffer_space);
 
     //State Machine Set up
     ret->stm.initial = NEGOTIATION_READ;

@@ -28,6 +28,7 @@ enum {
     MGMT_ADDADMIN = 11,
     MGMT_DELADMIN = 12,
     MGMT_LISTADMINS = 13,
+    MGMT_SETBUFFER = 14,
 
 };
 

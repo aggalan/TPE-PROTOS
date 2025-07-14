@@ -17,6 +17,7 @@ void help(){
     puts("  adduser <u> <p>   - add a user with password\n");
     puts("  deluser <u>       - delete a user\n");
     puts("  deladmin <u>      - delete an admin\n");
+    puts("  setbuffer <size> - set buffer size for the proxy\n");
     puts("  setauth <enabled|disabled> - enable or disable authentication\n");
     puts("  login <u> <p>     - authenticate user\n");
     puts("  dump [N lines]    - dump last N lines of access logs (default 10)\n");

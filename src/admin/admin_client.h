@@ -36,6 +36,7 @@ static const struct method_map methods[] = {
     {"addadmin", 11},
     {"deladmin", 12},
     {"listadmins", 13},
+    {"setbuffer", 14},
     {NULL, 0}
 };
 
