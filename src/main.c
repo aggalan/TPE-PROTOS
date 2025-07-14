@@ -12,6 +12,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <signal.h>
+#include "./admin/admin_logs.h"
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -33,7 +34,7 @@ struct socks5args socks5args;
 
 
 static void sigterm_handler(const int signal) {
-    LOG_INFO("signal %d, cleaning up and exiting\n", signal);
+    LOG_DEBUG("signal %d, cleaning up and exiting\n", signal);
     done = true;
 }
 
@@ -144,6 +145,7 @@ int main(const int argc, const char** argv) {
         }
     }
 
+    clean_logs();
     selector_destroy(selector);
     selector_close();
     close(socks_sock);

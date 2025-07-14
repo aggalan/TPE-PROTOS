@@ -73,7 +73,7 @@ static int handle_login(char *args, char **out, size_t *outlen) {
             return -1;
         }
         *outlen = strlen(msg);
-        LOG_INFO("Administrador autenticado correctamente");
+        LOG_DEBUG("Administrador autenticado correctamente");
         free(args_copy);
         return 0;
     }

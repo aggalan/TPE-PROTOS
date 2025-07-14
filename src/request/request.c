@@ -209,7 +209,7 @@ void request_connecting_init(const unsigned state,struct selector_key *key) {
 }
 
 unsigned request_connecting(struct selector_key *key) {
-    LOG_INFO("Requesting connecting...\n");
+    LOG_DEBUG("Requesting connecting...\n");
     SocksClient *data = ATTACHMENT(key);
     int error = 0;
     if (getsockopt(data->origin_fd, SOL_SOCKET, SO_ERROR, &error, &(socklen_t){sizeof(int)})) {
@@ -219,14 +219,14 @@ unsigned request_connecting(struct selector_key *key) {
 
     if (error) {
         if (data->origin_resolution->ai_next == NULL) {
-            LOG_INFO( "Failed to fulfill connection request from client %d", data->client_fd);
+            LOG_DEBUG( "Failed to fulfill connection request from client %d", data->client_fd);
             freeaddrinfo(data->origin_resolution);
             data->origin_resolution = NULL;
             data->current_addr = NULL;
-            LOG_INFO("ERROR: %d\n", error);
+            LOG_DEBUG("ERROR: %d\n", error);
             return request_error(data, key, errno_to_req_status(error));
         } else {
-            LOG_INFO( "Next attempt at connection request from client %d \n", data->client_fd);
+            LOG_DEBUG( "Next attempt at connection request from client %d \n", data->client_fd);
             selector_unregister_fd(key->s, data->origin_fd);
             close(data->origin_fd);
             data->current_addr = data->current_addr->ai_next;
@@ -238,7 +238,6 @@ unsigned request_connecting(struct selector_key *key) {
         LOG_ERROR("Failed to set interest for origin fd %d in selector\n", data->origin_fd);
         return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
     }
-    LOG_INFO("CONNECTING...\n");
     LOG_DEBUG("The connection was established!\n");
     return REQUEST_WRITE;
 }
@@ -255,7 +254,7 @@ ReqStatus errno_to_req_status(int err) {
 
 unsigned request_create_connection(struct selector_key *key) {
     SocksClient * data = ATTACHMENT(key);
-    LOG_INFO("Creating socket\n");
+    LOG_DEBUG("Creating socket\n");
     char host[NI_MAXHOST], serv[NI_MAXSERV];
     int r = getnameinfo(
         (struct sockaddr *)data->current_addr->ai_addr,
@@ -265,9 +264,9 @@ unsigned request_create_connection(struct selector_key *key) {
         NI_NUMERICHOST | NI_NUMERICSERV
     );
     if (r == 0) {
-        LOG_INFO("Trying to connect to %s:%s (Client %d)\n", host, serv, data->client_fd);
+        LOG_DEBUG("Trying to connect to %s:%s (Client %d)\n", host, serv, data->client_fd);
     } else {
-        LOG_INFO("Trying to connect to [unknown address] (Client %d)", data->client_fd);
+        LOG_DEBUG("Trying to connect to [unknown address] (Client %d)", data->client_fd);
     }
     data->origin_fd = socket(data->origin_resolution->ai_family, SOCK_STREAM | O_NONBLOCK, 0);
     if(data->origin_fd < 0){
@@ -280,8 +279,6 @@ unsigned request_create_connection(struct selector_key *key) {
 
     selector_fd_set_nio(data->origin_fd);
 
-    LOG_INFO("Socket created!\n");
-
     if(connect(data->origin_fd, data->origin_resolution->ai_addr, data->current_addr->ai_addrlen) == 0 || errno == EINPROGRESS){
         if (selector_register(key->s, data->origin_fd, get_fd_handler() , OP_WRITE, data) != SELECTOR_SUCCESS) {
             LOG_ERROR("Failed to register origin fd %d in selector\n", data->origin_fd);
@@ -293,7 +290,7 @@ unsigned request_create_connection(struct selector_key *key) {
             return ERROR;
         }
 
-        LOG_INFO("Attemping connection with Client Number %d\n",data->client_fd);
+        LOG_DEBUG("Attemping connection with Client Number %d\n",data->client_fd);
         return REQUEST_CONNECTING;
     }
 
