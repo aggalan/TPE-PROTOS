@@ -9,6 +9,7 @@
 #include "args.h"
 #include "logger.h"
 struct socks5args socks5args;
+
 static unsigned short
 port(const char* s)
 {
@@ -26,24 +27,27 @@ port(const char* s)
 }
 
 static void
-user(char* s, struct users* user)
+user(char* s, struct users* user,char * user_file)
 {
     char* p = strchr(s, ':');
     if (p == NULL)
     {
-        fprintf(stderr, "password not found\n");
+        fprintf(stderr, "user not found\n");
         exit(1);
     }
     else
     {
+        LOG_INFO("Adding user %s with password %s\n", s, p + 1);
         *p = 0;
         p++;
         user->name = s;
         user->pass = p;
-        admin_add_user(user->name, user->pass);
-
+        admin_add_user(user->name, user->pass, user_file);
+        LOG_INFO("User %s added successfully.\n", user->name);
     }
 }
+
+
 
 static void
 version(void)
@@ -60,6 +64,7 @@ usage(const char* progname)
             "Usage: %s [OPTION]...\n"
             "\n"
             "   -h               Imprime la ayuda y termina.\n"
+            "   -a <name>:<pass> Usuario y contraseña de usuario para los administradores de el proxy. Hasta 10.\n"
             "   -l <SOCKS addr>  Dirección donde servirá el proxy SOCKS.\n"
             "   -L <conf  addr>  Dirección donde servirá el servicio de management.\n"
             "   -p <SOCKS port>  Puerto entrante conexiones SOCKS.\n"
@@ -87,6 +92,7 @@ parse_args(const int argc, char** argv, struct socks5args* args)
 
     int c;
     int nusers = 0;
+    int anusers = 0;
 
     while (true)
     {
@@ -95,11 +101,23 @@ parse_args(const int argc, char** argv, struct socks5args* args)
             {0, 0, 0, 0}
         };
 
-        c = getopt_long(argc, argv,"hl:L:Np:P:u:v",long_options, &option_index);        if (c == -1)
+        c = getopt_long(argc, argv, "a:hl:L:Np:P:u:v", long_options, &option_index);        if (c == -1)
             break;
 
         switch (c)
-        {case 'h':
+        {case 'a':
+            if (anusers >= MAX_ADMINS)
+            {
+                fprintf(stderr, "maximun number of command line users reached: %d.\n", MAX_ADMINS);
+                exit(1);
+            }
+            else
+            {
+                user(optarg, args->admins + anusers,ADMIN_FILE);
+                anusers++;
+            }
+            break;
+            case 'h':
             usage(argv[0]);
             break;
         case 'l':
@@ -125,7 +143,7 @@ parse_args(const int argc, char** argv, struct socks5args* args)
             }
             else
             {
-                user(optarg, args->users + nusers);
+                user(optarg, args->users + nusers,USER_FILE);
                 nusers++;
             }
             break;

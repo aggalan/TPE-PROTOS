@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #define MAX_USERS 10
+#define MAX_ADMINS 10
 
 struct users
 {
@@ -23,6 +24,7 @@ struct socks5args
     bool authentication_enabled;
 
     struct users users[MAX_USERS];
+    struct users admins[MAX_ADMINS];
 };
 extern struct socks5args socks5args;
 

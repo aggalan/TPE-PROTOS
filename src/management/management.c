@@ -110,7 +110,7 @@ static void handle_login(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
         return;
     }
 
-    if (strcmp(user, "admin") == 0 && strcmp(pass, "secret123") == 0) {
+    if (validate_user(user,pass,ADMIN_FILE) == 0) {
         mgmt_is_logged_in = true;
         memcpy(&mgmt_logged_client, cli, sizeof(struct sockaddr_in));
         mgmt_last_seen = time(NULL);
@@ -148,7 +148,7 @@ static void handle_adduser(int sockfd, struct sockaddr_in *cli, socklen_t addrle
         return;
     }
 
-    uint8_t status = (admin_add_user(user, pass) == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_INTERNAL;
+    uint8_t status = (admin_add_user(user, pass, USER_FILE) == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_INTERNAL;
     send_simple_response(sockfd, cli, addrlen, MGMT_ADDUSER, status);
 }
 
@@ -159,13 +159,13 @@ static void handle_deluser(int sockfd, struct sockaddr_in *cli, socklen_t addrle
         return;
     }
 
-    uint8_t status = (admin_del_user(args) == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_NOTFOUND;
+    uint8_t status = (admin_del_user(args,USER_FILE) == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_NOTFOUND;
     send_simple_response(sockfd, cli, addrlen, MGMT_DELUSER, status);
 }
 
 static void handle_listusers(int sockfd, struct sockaddr_in *cli, socklen_t addrlen, const char *args) {
     (void)args;
-    char *users = admin_list_users();
+    char *users = admin_list_users(USER_FILE);
     send_data_response(sockfd, cli, addrlen, MGMT_LISTUSERS, users);
     //free(users);
 }
