@@ -40,6 +40,13 @@ else
   DEBUG_FLAGS := -DDEBUG -g
 endif
 
+# Add ASan flags when SANITIZE=1
+ifeq ($(SANITIZE),1)
+  CFLAGS  += -fsanitize=address -fno-omit-frame-pointer -g
+  LDFLAGS += -fsanitize=address
+endif
+
+
 CFLAGS       := -Wall -Wextra -std=gnu99 $(DEBUG_FLAGS) $(INCLUDE_DIRS) -pthread $(CHECK_CFLAGS)
 LDFLAGS      := -pthread $(CHECK_LIBS)
 
@@ -90,3 +97,7 @@ clean:
 	@find $(SRCDIR) -name '*.d' -delete
 	@rm -f $(TARGET) $(TEST_TARGET) $(ADMIN_TARGET)
 	@echo "Clean completed!"
+
+check-leaks: clean
+	$(MAKE) SANITIZE=1
+	ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 ./main
