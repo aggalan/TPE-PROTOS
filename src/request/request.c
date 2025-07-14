@@ -384,16 +384,16 @@ unsigned request_read(struct selector_key *key) {
     buffer_write_adv(&data->read_buffer, read_count);
     request_parse(&data->client.request_parser, &data->read_buffer);
     if (has_request_read_ended(&data->client.request_parser)) {
-        LOG_DEBUG("Parsed request successfully\n");
         LOG_DEBUG("%s\n", request_to_string(&data->client.request_parser));
         if(!has_request_errors(&data->client.request_parser)) {
+            LOG_DEBUG("Request parsed successfully, transitioning to setup...\n");
             return request_setup(key);
         }
-        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_request_answer(&data->client.request_parser , &data->write_buffer, key)) {
-            printf("No methods allowed or selector error\n");
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
+            LOG_ERROR("No methods allowed or selector error\n");
             return ERROR;
         }
-        return REQUEST_WRITE;
+        return request_error(data, key, data->client.request_parser.status);
     }
     return REQUEST_READ;
 }

@@ -62,11 +62,12 @@ ReqState parse_version(ReqParser * parser, uint8_t byte) {
 
 ReqState parse_cmd(ReqParser * parser, uint8_t byte) {
     LOG_DEBUG("parse_cmd: Parsing command byte %d\n", byte);
-    if (byte >= CONNECT && byte <= UDP_ASSOCIATE) {
+    if (byte == CONNECT) {
         parser->cmd = byte;
         return REQ_RSV;
     }
     LOG_ERROR("parse_cmd: Unsupported command %d\n", byte);
+    parser->status = REQ_ERROR_COMMAND_NOT_SUPPORTED;
     return REQ_ERROR;
 }
 
@@ -162,7 +163,7 @@ ReqState parse_end(ReqParser * parser, uint8_t byte) {
 }
 
 bool has_request_read_ended(ReqParser *parser) {
-    return parser != NULL && parser->state == REQ_END;
+    return parser->state == REQ_END || parser->state == REQ_ERROR;
 }
 
 bool has_request_errors(ReqParser *parser) {
@@ -190,14 +191,19 @@ ReqCodes fill_request_answer(ReqParser *parser, buffer *buffer, struct selector_
         else response_type = IPV6;
     }
 
+    if (parser->status != REQ_SUCCEDED) {
+        response_type = IPV4;
+    }
+
+
     buffer_write(buffer, response_type);
 
     switch (response_type) {
         case IPV4:
-            buffer_write(buffer, 127);
             buffer_write(buffer, 0);
             buffer_write(buffer, 0);
-            buffer_write(buffer, 1);
+            buffer_write(buffer, 0);
+            buffer_write(buffer, 0);
             break;
 
         case IPV6: {
