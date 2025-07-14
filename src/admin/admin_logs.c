@@ -8,7 +8,9 @@ static void _ts(char s[24])
 {
     time_t t = time(NULL);
     struct tm tm;
-    gmtime_r(&t, &tm);
+    setenv("TZ", "America/Argentina/Buenos_Aires", 1);
+    tzset();
+    localtime_r(&t, &tm);
     strftime(s, 24, "%Y-%m-%dT%H:%M:%SZ", &tm);
 }
 

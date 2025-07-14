@@ -8,7 +8,7 @@
 
 void negotiation_init(const unsigned state,struct selector_key *key) {
     if(state!=NEGOTIATION_READ){
-        LOG_ERROR("[Negotiation] Initiated with an invalid state: %u\n", state);
+        LOG_DEBUG("[Negotiation] Initiated with an invalid state: %u\n", state);
         return;
     }
     LOG_DEBUG("Creating negotiation...\n");
@@ -30,7 +30,7 @@ unsigned negotiation_read(struct selector_key *key) {
     uint8_t *read_buffer = buffer_write_ptr(&data->read_buffer, &read_size);
     ssize_t read_count = recv(key->fd, read_buffer, read_size, 0);
     if (read_count < 0) {
-        LOG_ERROR("recv error: %s", strerror(errno));
+        LOG_DEBUG("recv error: %s", strerror(errno));
         return ERROR;
     } if (read_count == 0) {
         LOG_DEBUG("Client closed the connection");
@@ -42,7 +42,7 @@ unsigned negotiation_read(struct selector_key *key) {
     negotiation_parse(&data->client.negotiation_parser, &data->read_buffer);
     if (has_negotiation_read_ended(&data->client.negotiation_parser)) {
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || fill_negotiation_answer(&data->client.negotiation_parser , &data->write_buffer)) {
-            LOG_ERROR("No methods allowed or selector error\n");
+            LOG_DEBUG("No methods allowed or selector error\n");
             return ERROR;
         }
         LOG_DEBUG("Negotiation parsed successfully\n");
