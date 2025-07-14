@@ -209,8 +209,17 @@ static void handle_setauth(int sockfd, struct sockaddr_in *cli, socklen_t addrle
         return;
     }
 
-    send_simple_response(sockfd, cli, addrlen, MGMT_SETAUTH, MGMT_OK_SIMPLE);
+    if (strcmp(args, "enabled") == 0) {
+        socks5args.authentication_enabled = true;
+        send_simple_response(sockfd, cli, addrlen, MGMT_SETAUTH, MGMT_OK_SIMPLE);
+    } else if (strcmp(args, "disabled") == 0) {
+        socks5args.authentication_enabled = false;
+        send_simple_response(sockfd, cli, addrlen, MGMT_SETAUTH, MGMT_OK_SIMPLE);
+    } else {
+        send_simple_response(sockfd, cli, addrlen, MGMT_SETAUTH, MGMT_ERR_SYNTAX);
+    }
 }
+
 
 static void handle_dump(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
                         const char *args) {
