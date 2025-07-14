@@ -16,7 +16,7 @@
 #include <sys/fcntl.h>
 #include "../logging/logger.h"
 #include "metrics/metrics.h"
-#include "admin_logs.h"
+#include "./admin/admin_logs.h"
 
 
 unsigned request_create_connection(struct selector_key *key);
@@ -119,14 +119,12 @@ unsigned request_setup(struct selector_key *key) {
                 return request_error(data, key, REQ_ERROR_GENERAL_FAILURE);
             }
             memcpy(key_copy, key, sizeof(*key));
-            // El fd se pausa mientras se resuelve DNS
             if (selector_set_interest_key(key, OP_NOOP) != SELECTOR_SUCCESS) {
                 LOG_ERROR("Failed to set interest OP_NOOP for DNS resolve");
                 free(key_copy);
                 free(dest_addr);
                 return ERROR;
             }
-            // IMPORTANTE: te lo pido por favor libera el thread de key_copy y dest_addr
             if (pthread_create(&dns_thread, NULL, request_dns_resolve, key_copy) != 0) {
                 LOG_ERROR("Failed to create DNS resolution thread");
                 free(key_copy);

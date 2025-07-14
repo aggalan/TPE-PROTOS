@@ -33,6 +33,7 @@ struct socks5args socks5args;
 
 
 static void sigterm_handler(const int signal) {
+    (void) signal;
     LOG_DEBUG("signal %d, cleaning up and exiting\n", signal);
     done = true;
 }

@@ -132,7 +132,6 @@ AuthState parse_error(AuthParser * parser, uint8_t byte){
     byte = byte; //@TODO: Cambiar cuando se haga Error Handling
     if(parser == NULL) LOG_ERROR("parse_error: Parser is NULL\n");
     return AUTH_ERROR;
-    //IDK
 }
 
 bool has_authentication_read_ended(AuthParser *p) {

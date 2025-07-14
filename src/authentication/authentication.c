@@ -1,7 +1,7 @@
 #include "authentication.h"
 #include "authentication_parser.h"
 #include "../socks5/socks5.h"
-#include "metrics.h"
+#include "../metrics/metrics.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
