@@ -162,13 +162,45 @@ static void handle_deluser(int sockfd, struct sockaddr_in *cli, socklen_t addrle
     uint8_t status = (admin_del_user(args,USER_FILE) == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_NOTFOUND;
     send_simple_response(sockfd, cli, addrlen, MGMT_DELUSER, status);
 }
+static void handle_deladmins(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                           const char *args) {
+    if (!args || strlen(args) == 0) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_DELUSER, MGMT_ERR_SYNTAX);
+        return;
+    }
+
+    uint8_t status = (admin_del_user(args,ADMIN_FILE) == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_NOTFOUND;
+    send_simple_response(sockfd, cli, addrlen, MGMT_DELUSER, status);
+}
+static void handle_addadmins(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
+                           const char *args) {
+    char user[64], pass[64];
+    if (!parse_user_pass(args, user, pass, sizeof(user))) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_ADDUSER, MGMT_ERR_SYNTAX);
+        return;
+    }
+
+    uint8_t status = (admin_add_user(user, pass, ADMIN_FILE) == 0) ? MGMT_OK_SIMPLE : MGMT_ERR_INTERNAL;
+    send_simple_response(sockfd, cli, addrlen, MGMT_ADDUSER, status);
+}
 
 static void handle_listusers(int sockfd, struct sockaddr_in *cli, socklen_t addrlen, const char *args) {
     (void)args;
-    char *users = admin_list_users(USER_FILE);
+    char *users = admin_list_users(USER_FILE,10, atoi(args));
     send_data_response(sockfd, cli, addrlen, MGMT_LISTUSERS, users);
     //free(users);
 }
+
+
+static void handle_listadmins(int sockfd, struct sockaddr_in *cli, socklen_t addrlen, const char *args) {
+    (void)args;
+    char *users = admin_list_users(ADMIN_FILE,10, atoi(args));
+    send_data_response(sockfd, cli, addrlen, MGMT_LISTUSERS, users);
+    //free(users);
+}
+
+
+
 
 static void handle_setauth(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
                            const char *args) {
@@ -241,6 +273,9 @@ static const struct command_info commands[] = {
         {MGMT_DUMP,      handle_dump,      true,  true},
         {MGMT_SEARCHLOGS, handle_searchlogs, true, true},
         {MGMT_CLEARLOGS, (cmd_handler_t)handle_clearlogs, true,  false},
+        {MGMT_ADDADMIN,   handle_addadmins, true,  true},
+        {MGMT_DELADMIN,   handle_deladmins, true,  true},
+        {MGMT_LISTADMINS, (cmd_handler_t)handle_listadmins, true,  false},
 };
 
 static const size_t num_commands = sizeof(commands) / sizeof(commands[0]);

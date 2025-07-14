@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include "selector/selector.h"
+#include "../selector/selector.h"
 #define MGMT_TIMEOUT 30
 
 #define MAX_UDP_PACKET 1024
@@ -24,7 +24,11 @@ enum {
     MGMT_DUMP      = 7,
     MGMT_SEARCHLOGS= 8,
     MGMT_CLEARLOGS = 9,
-    MGMT_LOGOUT    = 10
+    MGMT_LOGOUT    = 10,
+    MGMT_ADDADMIN = 11,
+    MGMT_DELADMIN = 12,
+    MGMT_LISTADMINS = 13,
+
 };
 
 enum {

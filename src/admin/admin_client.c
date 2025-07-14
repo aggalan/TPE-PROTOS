@@ -12,8 +12,11 @@ void help(){
     puts("Available commands:\n");
     puts("  stats             - show proxy metrics\n");
     puts("  listusers [N pages] - list configured N users \n");
+    puts("  listadmins [N pages] - list configured N admins\n");
+    puts("  addadmin <u> <p>   - add a admin with password\n");
     puts("  adduser <u> <p>   - add a user with password\n");
     puts("  deluser <u>       - delete a user\n");
+    puts("  deladmin <u>      - delete an admin\n");
     puts("  setauth <enabled|disabled> - enable or disable authentication\n");
     puts("  login <u> <p>     - authenticate user\n");
     puts("  dump [N lines]    - dump last N lines of access logs (default 10)\n");
