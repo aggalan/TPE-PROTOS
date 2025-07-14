@@ -26,7 +26,6 @@
 #include "selector/selector.h"
 #include "logging/logger.h"
 #include "metrics/metrics.h"
-#include "users/user_manager.h"
 #include "management/management.h"
 
 static bool done = false;

@@ -186,7 +186,7 @@ fail:
     {
         close(client);
     }
-    // socks5_destroy(state);
+//     socks5_destroy(state);
 }
 
 

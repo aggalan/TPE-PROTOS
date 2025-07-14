@@ -60,7 +60,6 @@ usage(const char* progname)
             "Usage: %s [OPTION]...\n"
             "\n"
             "   -h               Imprime la ayuda y termina.\n"
-            "   -d               Modo depuración. Imprime mensajes de depuración.\n"
             "   -l <SOCKS addr>  Dirección donde servirá el proxy SOCKS.\n"
             "   -L <conf  addr>  Dirección donde servirá el servicio de management.\n"
             "   -p <SOCKS port>  Puerto entrante conexiones SOCKS.\n"
