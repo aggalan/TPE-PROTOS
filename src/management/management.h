@@ -24,7 +24,11 @@ enum {
     MGMT_DUMP      = 7,
     MGMT_SEARCHLOGS= 8,
     MGMT_CLEARLOGS = 9,
-    MGMT_LOGOUT    = 10
+    MGMT_LOGOUT    = 10,
+    MGMT_ADDADMIN = 11,
+    MGMT_DELADMIN = 12,
+    MGMT_LISTADMINS = 13,
+
 };
 
 enum {

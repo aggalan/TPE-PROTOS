@@ -33,7 +33,7 @@ int admin_add_user(const char *username, const char *password, const char *user_
     }
     fclose(f);
 
-    if (strcmp(user_file, ADMIN_FILE) == 0 && count >= ADMIN_MAX) {
+    if (count >= MAX_GENERAL_USERS) {
         return -1;
     }
 
@@ -80,60 +80,73 @@ int admin_del_user(const char *username, const char *user_file) {
 }
 
 
-char *admin_list_users(const char *user_file) {
+char *admin_list_users(const char *user_file, size_t limit, size_t offset) {
     if (!user_file) return NULL;
     if (ensure_file_exists(user_file) != 0) return NULL;
 
+    // load all names
+    size_t cap = 16, count = 0;
+    char **names = malloc(cap * sizeof(char*));
+    if (!names) return NULL;
+
     FILE *f = fopen(user_file, "r");
-    if (!f) return NULL;
+    if (!f) { free(names); return NULL; }
 
-    size_t cap = 1024, len = 0;
-    char *out = malloc(cap);
-    if (!out) { fclose(f); return NULL; }
-    out[0] = '\0';
-
-    char line[512], u[256], p[256];
-    size_t count = 0;
-    size_t limit = (strcmp(user_file, ADMIN_FILE) == 0) ? ADMIN_MAX : USER_MAX;
-
-    while (count < limit && fgets(line, sizeof(line), f)) {
-        if (sscanf(line, "%255s %255s", u, p) == 2) {
-            size_t need = strlen(u) + 1;
-            if (len + need + 1 > cap) {
-                cap = (len + need + 1) * 2;
-                char *tmp = realloc(out, cap);
-                if (!tmp) { free(out); fclose(f); return NULL; }
-                out = tmp;
-            }
-            memcpy(out + len, u, strlen(u));
-            len += strlen(u);
-            out[len++] = '\n';
-            out[len] = '\0';
-            count++;
+    char u[256], p[256];
+    while (fscanf(f, "%255s %255s", u, p) == 2) {
+        if (count >= cap) {
+            cap *= 2;
+            char **tmp = realloc(names, cap * sizeof(char*));
+            if (!tmp) break;
+            names = tmp;
         }
+        names[count++] = strdup(u);
     }
     fclose(f);
 
-    if (len > 0 && out[len-1] == '\n') out[len-1] = '\0';
+    size_t start = offset < count ? offset : count;
+    size_t end = (limit > 0) ? start + limit : count;
+    if (end > count) end = count;
+
+    size_t out_cap = 256, out_len = 0;
+    char *out = malloc(out_cap);
+    if (!out) { for (size_t i = 0; i < count; i++) free(names[i]); free(names); return NULL; }
+    out[0] = '\0';
+
+    for (size_t i = start; i < end; i++) {
+        size_t need = strlen(names[i]) + 1;
+        if (out_len + need + 1 > out_cap) {
+            out_cap = (out_len + need + 1) * 2;
+            char *tmp = realloc(out, out_cap);
+            if (!tmp) break;
+            out = tmp;
+        }
+        strcat(out, names[i]);
+        strcat(out, "\n");
+        out_len = strlen(out);
+    }
+
+    for (size_t i = 0; i < count; i++) free(names[i]);
+    free(names);
+
+    if (out_len > 0 && out[out_len-1] == '\n') out[out_len-1] = '\0';
     return out;
 }
 
 int validate_user(const char *username, const char *password, const char *user_file) {
     if (!username || !password || !user_file) return -1;
-    if (ensure_file_exists(user_file) != 0) return -1;
 
     FILE *f = fopen(user_file, "r");
     if (!f) return -1;
 
-    char line[512], u[256], p[256];
-    while (fgets(line, sizeof(line), f)) {
-        if (sscanf(line, "%255s %255s", u, p) == 2 && strcmp(u, username) == 0) {
+    char u[256], p[256];
+    while (fscanf(f, "%255s %255s", u, p) == 2) {
+        if (strcmp(u, username) == 0 && strcmp(p, password) == 0) {
             fclose(f);
-            return (strcmp(p, password) == 0) ? 0 : -1;
+            return 0;
         }
     }
     fclose(f);
     return -1;
 }
-
 
