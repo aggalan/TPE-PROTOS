@@ -3,10 +3,6 @@
 #define DEFAULT_PORT 8080
 #define BUFF_SIZE 1024
 
-#define ADMIN_USER "admin"
-#define ADMIN_PASS "secret"
-
-#define MAXLINE 512
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -14,7 +10,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/socket.h>  // socket
+#include <sys/socket.h>
 #include <errno.h>
 
 struct admin_client {

@@ -14,7 +14,6 @@ static int ensure_file_exists(void) {
 int admin_add_user(const char *username, const char *password) {
     if (!username || !password) return -1;
     if (ensure_file_exists() != 0) return -1;
-    //check LIMIT 10 users
     FILE *f = fopen(USER_FILE, "r");
     if (!f) return -1;
     char line[512], u[256], p[256];

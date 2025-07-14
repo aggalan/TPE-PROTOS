@@ -30,7 +30,7 @@ static int handle_login(char *args, char **out, size_t *outlen) {
 
     if (!args) {
         LOG_ERROR("Login: No arguments provided");
-        const char *err = "ERROR: uso: login <username> <password>\n";
+        const char *err = "ERROR: use: login <username> <password>\n";
         *out = strdup(err);
         *outlen = strlen(err);
         return -1;
@@ -39,7 +39,7 @@ static int handle_login(char *args, char **out, size_t *outlen) {
     char *args_copy = strdup(args);
     if (!args_copy) {
         LOG_ERROR("Login: Memory allocation failed");
-        const char *err = "ERROR: error interno\n";
+        const char *err = "ERROR: internal server error\n";
         *out = strdup(err);
         *outlen = strlen(err);
         return -1;
@@ -54,7 +54,7 @@ static int handle_login(char *args, char **out, size_t *outlen) {
 
     if (!username || !password) {
         LOG_ERROR("Login: Missing username or password");
-        const char *err = "ERROR: debe proporcionar usuario y contraseña\n";
+        const char *err = "ERROR: user and password missing\n";
         *out = strdup(err);
         *outlen = strlen(err);
         free(args_copy);
@@ -65,7 +65,7 @@ static int handle_login(char *args, char **out, size_t *outlen) {
 
     if (strcmp(username, MGMT_USER) == 0 && strcmp(password, MGMT_PASS) == 0) {
         mgmt_is_logged_in = true;
-        const char *msg = "OK: sesión iniciada\n";
+        const char *msg = "OK: logged in\n";
         *out = strdup(msg);
         if (!*out) {
             LOG_ERROR("Login: Memory allocation failed for success message");
@@ -78,7 +78,7 @@ static int handle_login(char *args, char **out, size_t *outlen) {
         return 0;
     }
 
-    const char *err = "ERROR: credenciales inválidas\n";
+    const char *err = "ERROR: invalid credentials\n";
     *out = strdup(err);
     if (!*out) {
         LOG_ERROR("Login: Memory allocation failed for error message");
@@ -112,10 +112,10 @@ static int handle_adduser(char *args, char **out, size_t *outlen) {
     if (!username || !password) return -1;
     if (admin_add_user(username, password) != 0) return -1;
     LOG_DEBUG("Usuario '%s' agregado", username);
-    size_t n = snprintf(NULL, 0, "Usuario '%s' creado\n", username);
+    size_t n = snprintf(NULL, 0, "User '%s' Created\n", username);
     *out = malloc(n + 1);
     if (!*out) return -1;
-    snprintf(*out, n + 1, "Usuario '%s' creado\n", username);
+    snprintf(*out, n + 1, "User '%s' created\n", username);
     LOG_DEBUG("Usuario '%s' agregado", username);
     *outlen = n;
     return 0;
@@ -129,7 +129,7 @@ static int handle_deluser(char *args, char **out, size_t *outlen) {
     size_t n = snprintf(NULL, 0, "Usuario '%s' eliminado\n", username);
     *out = malloc(n + 1);
     if (!*out) return -1;
-    snprintf(*out, n + 1, "Usuario '%s' eliminado\n", username);
+    snprintf(*out, n + 1, "User '%s' deleted\n", username);
     LOG_DEBUG("Usuario '%s' eliminado", username);
     *outlen = n;
     return 0;
@@ -153,17 +153,17 @@ static int handle_setauth(char *args, char **out, size_t *outlen) {
     if(strcmp(args, "enabled") == 0) {
          socks5args.authentication_enabled = true;
          LOG_DEBUG("Autenticación habilitada");
-        *out = strdup("Autenticación habilitada\n");
+        *out = strdup("Auth enabled\n");
         *outlen = strlen(*out);
     }
     else if (strcmp(args, "disabled") == 0) {
          socks5args.authentication_enabled = false;
          LOG_DEBUG("Autenticación deshabilitada");
-         *out = strdup("Autenticación deshabilitada\n");
+         *out = strdup("Auth disabled\n");
          *outlen = strlen(*out);
     } else {
         LOG_ERROR("Comando setauth inválido: %s", args);
-        const char *msg = "ERROR: comando setauth inválido\n";
+        const char *msg = "ERROR: invalid setauth command\n";
         *out = strdup(msg);
         *outlen = strlen(msg);
     }
@@ -184,7 +184,7 @@ static int handle_search(char *args, char **out, size_t *outlen){
 }
 
 static int handle_clear_logs(char *args, char **out, size_t *outlen){
-    const char *msg = "OK: logs limpiados\n";
+    const char *msg = "OK: logs cleaned\n";
     *out = strdup(msg);
     *outlen = strlen(msg);
     clean_logs();
@@ -234,7 +234,7 @@ static int process_udp_command(char *command, char **out, size_t *outlen) {
     char *cmd_copy = strdup(command);
     if (!cmd_copy) {
         LOG_ERROR("Memory allocation failed for command copy");
-        const char *msg = "ERROR: error interno\n";
+        const char *msg = "ERROR: internal server error\n";
         *out = strdup(msg);
         *outlen = strlen(msg);
         return -1;
@@ -249,10 +249,10 @@ static int process_udp_command(char *command, char **out, size_t *outlen) {
               mgmt_is_logged_in);
 
     if (!mgmt_is_logged_in && (!cmd || strcmp(cmd, "login") != 0)) {
-        const char *msg = "ERROR: inicie sesión con 'login <user> <pass>'\n";
+        const char *msg = "ERROR: login with 'login <user> <pass>'\n";
         *out = strdup(msg);
         *outlen = strlen(msg);
-        LOG_WARNING("Comando '%s' rechazado: no autenticado", cmd ? cmd : "NULL");
+        LOG_WARNING("Comando '%s' failed: not authenticated", cmd ? cmd : "NULL");
         free(cmd_copy);
         return -1;
     }
@@ -276,13 +276,13 @@ static int process_udp_command(char *command, char **out, size_t *outlen) {
     }
 
     if (rc == 0 && response) {
-        LOG_DEBUG("Comando '%s' procesado correctamente", cmd);
+        LOG_DEBUG("Command '%s' processed successfully", cmd);
         *out = response;
         *outlen = response_len;
     } else {
-        LOG_ERROR("Comando '%s' fallido o no reconocido (rc=%d)", cmd ? cmd : "NULL", rc);
+        LOG_ERROR("Command '%s' failed or unrecognized (rc=%d)", cmd ? cmd : "NULL", rc);
         if (response) free(response);
-        const char *msg = "ERROR: comando inválido o fallo interno\n";
+        const char *msg = "ERROR: invalid command or internal error\n";
         *out = strdup(msg);
         *outlen = strlen(msg);
     }

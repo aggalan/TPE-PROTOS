@@ -8,7 +8,7 @@ Un proxy **SOCKS v5** escrito en C que admite autenticación opcional (usuario
 
 * Proxy **SOCKS v5** con soporte IPv4/IPv6 y DNS remoto (`*h`).
 * Hasta **10 usuarios simultáneos** con autenticación individual.
-* **Servicio de gestión** en un puerto TCP independiente
+* **Servicio de gestión** en un puerto UDP independiente
 
   * Métricas en tiempo real
   * Alta / baja de usuarios sin reiniciar el demonio

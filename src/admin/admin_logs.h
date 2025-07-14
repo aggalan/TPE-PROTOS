@@ -1,6 +1,6 @@
 
-#ifndef ACCESS_LOG_H
-#define ACCESS_LOG_H
+#ifndef ADMIN_LOGS_H
+#define ADMIN_LOGS_H
 
 #include <stdio.h>
 #include <string.h>
@@ -23,4 +23,4 @@ char * search_access(const char *user);
 
 void clean_logs(void);
 
-#endif /* ACCESS_LOG_H */
+#endif /* ADMIN_LOGS_H */
