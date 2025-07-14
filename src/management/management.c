@@ -100,7 +100,7 @@ static int handle_stats(char *args, char **out, size_t *outlen) {
     size_t n = snprintf(NULL, 0, "%s\n", stats);
     *out = malloc(n + 1);
     if (!*out) { return -1; }
-    snprintf(*out, n + 1, "%s\n", stats);
+    snprintf(*out, n+1, "OK: %s\n", stats);
     LOG_DEBUG("Estadísticas enviadas: %s", stats);
     *outlen = n;
     return 0;
@@ -115,7 +115,7 @@ static int handle_adduser(char *args, char **out, size_t *outlen) {
     size_t n = snprintf(NULL, 0, "User '%s' Created\n", username);
     *out = malloc(n + 1);
     if (!*out) return -1;
-    snprintf(*out, n + 1, "User '%s' created\n", username);
+    snprintf(*out, n+1, "OK: User Created, %s\n", username);
     LOG_DEBUG("Usuario '%s' agregado", username);
     *outlen = n;
     return 0;
@@ -129,7 +129,7 @@ static int handle_deluser(char *args, char **out, size_t *outlen) {
     size_t n = snprintf(NULL, 0, "Usuario '%s' eliminado\n", username);
     *out = malloc(n + 1);
     if (!*out) return -1;
-    snprintf(*out, n + 1, "User '%s' deleted\n", username);
+    snprintf(*out, n+1, "OK: User deleted, %s\n", username);
     LOG_DEBUG("Usuario '%s' eliminado", username);
     *outlen = n;
     return 0;
@@ -143,7 +143,7 @@ static int handle_listusers(char *args, char **out, size_t *outlen) {
     LOG_DEBUG("Lista de usuarios: %s", list);
     *out = malloc(n + 1);
     if (!*out) { free(list); return -1; }
-    snprintf(*out, n + 1, "%s\n", list);
+    snprintf(*out, n+1, "OK: User List,\n %s\n", list);
     *outlen = n;
     free(list);
     return 0;
@@ -153,13 +153,13 @@ static int handle_setauth(char *args, char **out, size_t *outlen) {
     if(strcmp(args, "enabled") == 0) {
          socks5args.authentication_enabled = true;
          LOG_DEBUG("Autenticación habilitada");
-        *out = strdup("Auth enabled\n");
+        *out = strdup("OK: Auth enabled\n");
         *outlen = strlen(*out);
     }
     else if (strcmp(args, "disabled") == 0) {
          socks5args.authentication_enabled = false;
          LOG_DEBUG("Autenticación deshabilitada");
-         *out = strdup("Auth disabled\n");
+         *out = strdup("OK: Auth disabled\n");
          *outlen = strlen(*out);
     } else {
         LOG_ERROR("Comando setauth inválido: %s", args);
@@ -177,7 +177,7 @@ static int handle_search(char *args, char **out, size_t *outlen){
     LOG_DEBUG("Search: %s", search);
     *out = malloc(n + 1);
     if (!*out) { free(search); return -1; }
-    snprintf(*out, n + 1, "%s\n", search);
+    snprintf(*out, n+1, "OK: serach, %s\n", search);
     *outlen = n;
     free(search);
     return 0;
@@ -197,8 +197,10 @@ static int handle_dump(char *args, char **out, size_t *outlen){
     size_t n = snprintf(NULL, 0, "%s\n", dump);
     LOG_DEBUG("Dump: %s", search);
     *out = malloc(n + 1);
-    if (!*out) {  return -1; }
-    snprintf(*out, n + 1, "%s\n", dump);
+    if (!*out) {
+        return -1;
+    }
+    snprintf(*out, n+1, "OK: dump, %s\n", dump);
     *outlen = n;
     return 0;
 }
