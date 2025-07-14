@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include "selector/selector.h"
+#include "../selector/selector.h"
 #define MGMT_TIMEOUT 30
 
 #define MAX_UDP_PACKET 1024
