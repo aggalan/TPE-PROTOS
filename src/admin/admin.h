@@ -7,6 +7,7 @@
 #define USER_FILE      "./src/authentication/users.txt"
 #define ADMIN_FILE     "./src/admin/admins.txt"
 #define USER_MAX_LEN   15
+#define PASS_MAX_LEN 15
 #define MAX_GENERAL_USERS  100
 
 

@@ -142,7 +142,7 @@ bool validate_user(const char *username, const char *password, const char *user_
     if (f == NULL)
         return false;
     char fuser[USER_MAX_LEN + 1];
-    char fpass[PASS_MAX + 1];
+    char fpass[PASS_MAX_LEN + 1];
 
     while (fscanf(f, " %15s %15s", fuser, fpass) == 2) {
         if (strcmp(username, fuser) == 0 && strcmp(password, fpass) == 0) {
