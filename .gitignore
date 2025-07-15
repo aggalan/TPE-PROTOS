@@ -4,3 +4,5 @@ build.sh
 main
 socks5d
 admin_client
+.idea
+.vscode

@@ -229,7 +229,6 @@ main() {
             print_colored $BRIGHT_BLUE "${BOLD}Admin client built successfully!${NC}"
         else
             print_colored $BRIGHT_GREEN "${BOLD}Ready to execute: ${BRIGHT_CYAN}./$EXECUTABLE_NAME${NC}"
-            print_colored $BRIGHT_BLUE "${BOLD}Run tests with: ${BRIGHT_CYAN}./test.sh${NC}"
         fi
         
     else
