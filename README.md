@@ -28,6 +28,13 @@ $ make                    # genera ./socks5d
 $ make admin_client       # genera ./admin_client
 ```
 
+tambien puedes compilar ambos con:
+
+```bash
+$ ./build.sh # genera ./socks5d 
+$ ./build.sh -a # genera ./admin_clients
+```
+
 Dependencias:
 
 * Sistema **POSIX** (probado en macOS y Linux)
@@ -43,6 +50,7 @@ Dependencias:
 Uso: socks5d [OPCIÓN]...
 
    -h               Imprime la ayuda y termina.
+   -a <user>:<pass> Usuario y contraseña autorizados para el servidor de managment (máx. 10).
    -l <dir SOCKS>   Dirección donde escuchará el proxy SOCKS.
    -L <dir conf>    Dirección donde escuchará el servicio de gestión.
    -p <puerto S>    Puerto para conexiones SOCKS.
@@ -77,23 +85,26 @@ $ ./admin_client <host> <puerto>
 login: > alice s3cr3t
 ```
 
-### Comandos interactivos
+## Comandos interactivos
 
-| Comando           | Descripción                                                          |                                                     |
-| ----------------- | -------------------------------------------------------------------- | --------------------------------------------------- |
-| `stats`           | Muestra métricas del proxy (conexiones totales, bytes, concurrencia) |                                                     |
-| `listusers`       | Lista los usuarios configurados                                      |                                                     |
-| `adduser <u> <p>` | Agrega un usuario con contraseña                                     |                                                     |
-| `deluser <u>`     | Elimina un usuario                                                   |                                                     |
-| \`setauth enabled | disabled\`                                                           | Habilita o deshabilita la autenticación obligatoria |
-| `login <u> <p>`   | Autentica la sesión de administración actual                         |                                                     |
-| `dump [N]`        | Muestra las últimas *N* líneas del log (por defecto 10)              |                                                     |
-| `searchlogs <u>`  | Filtra el log por nombre de usuario                                  |                                                     |
-| `clearlogs`       | Borra todos los registros                                            |                                                     |
-| `help`            | Muestra esta ayuda                                                   |                                                     |
-| `exit`            | Cierra el cliente                                                    |                                                     |
+| Comando                  | Descripción                                                              |                                                     |
+| ------------------------ | ------------------------------------------------------------------------ | --------------------------------------------------- |
+| `stats`                  | Muestra métricas del proxy (conexiones totales, bytes, concurrencia)     |                                                     |
+| `listusers [N páginas]`  | Lista los usuarios configurados (soporta paginación por N usuarios)      |                                                     |
+| `listadmins [N páginas]` | Lista los administradores configurados (soporta paginación por N admins) |                                                     |
+| `adduser <u> <p>`        | Agrega un usuario con contraseña                                         |                                                     |
+| `addadmin <u> <p>`       | Agrega un administrador con contraseña                                   |                                                     |
+| `deluser <u>`            | Elimina un usuario                                                       |                                                     |
+| `deladmin <u>`           | Elimina un administrador                                                 |                                                     |
+| \`setauth \<enabled      | disabled>\`                                                              | Habilita o deshabilita la autenticación obligatoria |
+| `setbuffer <tamaño>`     | Ajusta el tamaño del buffer para el proxy                                |                                                     |
+| `login <u> <p>`          | Autentica la sesión de administración actual                             |                                                     |
+| `dump [N líneas]`        | Muestra las últimas *N* líneas del log (por defecto 10)                  |                                                     |
+| `searchlogs <u>`         | Filtra el log por nombre de usuario                                      |                                                     |
+| `clearlogs`              | Borra todos los registros                                                |                                                     |
+| `help`                   | Muestra esta ayuda                                                       |                                                     |
+| `exit`                   | Cierra el cliente                                                        |                                                     |
 
----
 
 ## Registros de acceso y métricas
 
