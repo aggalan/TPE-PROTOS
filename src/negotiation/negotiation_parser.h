@@ -44,7 +44,6 @@ typedef enum {
 typedef enum {
     NEG_OK,              /**< Operación exitosa */
     NEG_FULL_BUFFER,     /**< Buffer lleno, no se puede escribir */
-    NEG_INVALID_METHOD   /**< Método de autenticación inválido */
 } NegCodes;
 
 /**

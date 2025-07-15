@@ -75,7 +75,8 @@ unsigned negotiation_write(struct selector_key *key) {
         return NEGOTIATION_WRITE;
     }
 
-    if (has_negotiation_errors(&data->client.negotiation_parser) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
+    if (data->client.negotiation_parser.auth_method == NO_METHOD || has_negotiation_errors(&data->client.negotiation_parser) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
+        LOG_INFO("Negotiation failed or selector error\n");
         return ERROR;
     }
 

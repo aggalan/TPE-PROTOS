@@ -13,7 +13,6 @@ static const uint8_t SOCKS_VERSION = 0x05;
 
 typedef NegState (*parse_character)(NegParser * parser, uint8_t byte);
 
-// Static function declarations
 static NegState parse_version(NegParser * parser, uint8_t byte);
 static NegState parse_method_count(NegParser * parser, uint8_t byte);
 static NegState parse_methods(NegParser * parser, uint8_t byte);
@@ -78,8 +77,6 @@ NegState parse_method_count(NegParser * parser, uint8_t byte){
 }
 
 NegState parse_methods(NegParser * parser, uint8_t byte){
-    LOG_DEBUG("Method parsed: %d\n", byte);
-    
     // Priority: USER_PASS > NO_AUTH
     if(byte == USER_PASS){
         parser->auth_method = byte;
@@ -104,6 +101,7 @@ NegState parse_end(NegParser * parser, uint8_t byte){
 
 
 bool has_negotiation_read_ended(NegParser * parser){
+    LOG_INFO("Checking if negotiation read has ended...\n");
     if(parser == NULL) return false;
     return parser->state == NEG_END;
 }
@@ -132,11 +130,6 @@ NegCodes fill_negotiation_answer(NegParser * parser, buffer * buffer){
     
     LOG_DEBUG("Negotiation answer: Version=%d, Method=%d\n", 
               SOCKS_VERSION, parser->auth_method);
-    
-    if (parser->auth_method == NO_METHOD) {
-        LOG_DEBUG("No acceptable authentication method found\n");
-        return NEG_INVALID_METHOD;
-    }
     
     return NEG_OK;
 }
