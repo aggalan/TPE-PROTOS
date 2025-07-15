@@ -3,3 +3,4 @@ build.sh
 *.d
 main
 socks5d
+admin_client

@@ -35,6 +35,12 @@ UNDERLINE='\033[4m'
 BLINK='\033[5m'
 REVERSE='\033[7m'
 
+# Build mode variables
+ADMIN_MODE=false
+BUILD_TARGET="all"
+EXECUTABLE_NAME="socks5d"
+MODE_TEXT="SOCKS5 Server"
+
 print_colored() {
     echo -e "${1}${2}${NC}"
 }
@@ -106,15 +112,27 @@ format_warnings() {
 }
 
 print_ascii_art() {
-    print_colored $BRIGHT_MAGENTA "
-${BRIGHT_CYAN}███████╗${BRIGHT_MAGENTA} ██████╗ ${BRIGHT_YELLOW} ██████╗${BRIGHT_GREEN}██╗  ██╗${BRIGHT_BLUE}███████╗
-${BRIGHT_CYAN}██╔════╝${BRIGHT_MAGENTA}██╔═══██╗${BRIGHT_YELLOW}██╔════╝${BRIGHT_GREEN}██║ ██╔╝${BRIGHT_BLUE}██╔════╝
-${BRIGHT_CYAN}███████╗${BRIGHT_MAGENTA}██║   ██║${BRIGHT_YELLOW}██║     ${BRIGHT_GREEN}█████╔╝ ${BRIGHT_BLUE}███████╗
-${BRIGHT_CYAN}╚════██║${BRIGHT_MAGENTA}██║   ██║${BRIGHT_YELLOW}██║     ${BRIGHT_GREEN}██╔═██╗ ${BRIGHT_BLUE}╚════██║
-${BRIGHT_CYAN}███████║${BRIGHT_MAGENTA}╚██████╔╝${BRIGHT_YELLOW}╚██████╗${BRIGHT_GREEN}██║  ██╗${BRIGHT_BLUE}███████║
-${BRIGHT_CYAN}╚══════╝${BRIGHT_MAGENTA} ╚═════╝ ${BRIGHT_YELLOW} ╚═════╝${BRIGHT_GREEN}╚═╝  ╚═╝${BRIGHT_BLUE}╚══════╝
+    if [[ "$ADMIN_MODE" == true ]]; then
+        print_colored $BRIGHT_MAGENTA "
+ ${BRIGHT_CYAN}███████╗${BRIGHT_MAGENTA} ██████╗ ${BRIGHT_YELLOW} ██████╗${BRIGHT_GREEN}██╗  ██╗${BRIGHT_BLUE}███████╗
+ ${BRIGHT_CYAN}██╔════╝${BRIGHT_MAGENTA}██╔═══██╗${BRIGHT_YELLOW}██╔════╝${BRIGHT_GREEN}██║ ██╔╝${BRIGHT_BLUE}██╔════╝
+ ${BRIGHT_CYAN}███████╗${BRIGHT_MAGENTA}██║   ██║${BRIGHT_YELLOW}██║     ${BRIGHT_GREEN}█████╔╝ ${BRIGHT_BLUE}███████╗
+ ${BRIGHT_CYAN}╚════██║${BRIGHT_MAGENTA}██║   ██║${BRIGHT_YELLOW}██║     ${BRIGHT_GREEN}██╔═██╗ ${BRIGHT_BLUE}╚════██║
+ ${BRIGHT_CYAN}███████║${BRIGHT_MAGENTA}╚██████╔╝${BRIGHT_YELLOW}╚██████╗${BRIGHT_GREEN}██║  ██╗${BRIGHT_BLUE}███████║
+ ${BRIGHT_CYAN}╚══════╝${BRIGHT_MAGENTA} ╚═════╝ ${BRIGHT_YELLOW} ╚═════╝${BRIGHT_GREEN}╚═╝  ╚═╝${BRIGHT_BLUE}╚══════╝
 "
-    print_colored $LIME "            Ready to Rock and Roll!"
+        print_colored $ORANGE "           Admin Client Ready!"
+    else
+        print_colored $BRIGHT_MAGENTA "
+ ${BRIGHT_CYAN}███████╗${BRIGHT_MAGENTA} ██████╗ ${BRIGHT_YELLOW} ██████╗${BRIGHT_GREEN}██╗  ██╗${BRIGHT_BLUE}███████╗
+ ${BRIGHT_CYAN}██╔════╝${BRIGHT_MAGENTA}██╔═══██╗${BRIGHT_YELLOW}██╔════╝${BRIGHT_GREEN}██║ ██╔╝${BRIGHT_BLUE}██╔════╝
+ ${BRIGHT_CYAN}███████╗${BRIGHT_MAGENTA}██║   ██║${BRIGHT_YELLOW}██║     ${BRIGHT_GREEN}█████╔╝ ${BRIGHT_BLUE}███████╗
+ ${BRIGHT_CYAN}╚════██║${BRIGHT_MAGENTA}██║   ██║${BRIGHT_YELLOW}██║     ${BRIGHT_GREEN}██╔═██╗ ${BRIGHT_BLUE}╚════██║
+ ${BRIGHT_CYAN}███████║${BRIGHT_MAGENTA}╚██████╔╝${BRIGHT_YELLOW}╚██████╗${BRIGHT_GREEN}██║  ██╗${BRIGHT_BLUE}███████║
+ ${BRIGHT_CYAN}╚══════╝${BRIGHT_MAGENTA} ╚═════╝ ${BRIGHT_YELLOW} ╚═════╝${BRIGHT_GREEN}╚═╝  ╚═╝${BRIGHT_BLUE}╚══════╝
+"
+        print_colored $LIME "            Ready to Rock and Roll!"
+    fi
     echo
 }
 
@@ -127,16 +145,53 @@ show_build_stats() {
     print_colored $BRIGHT_CYAN "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     print_colored $BG_BLUE$BRIGHT_WHITE$BOLD "                     BUILD STATISTICS                     "
     print_colored $BRIGHT_CYAN "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    printf "${BRIGHT_YELLOW}Build time: ${BRIGHT_GREEN}%02d:%02d${NC}\n" $((duration / 60)) $((duration % 60))
-    printf "${BRIGHT_YELLOW}Object files: ${BRIGHT_GREEN}%d${NC}\n" $(find src -name '*.o' | wc -l)
-    printf "${BRIGHT_YELLOW}Executable: ${BRIGHT_GREEN}%s${NC}\n" "$(ls -lh main 2>/dev/null | awk '{print $5}' || echo 'N/A')"
+    printf "${BRIGHT_YELLOW} Build time: ${BRIGHT_GREEN}%02d:%02d${NC}\n" $((duration / 60)) $((duration % 60))
+    printf "${BRIGHT_YELLOW} Object files: ${BRIGHT_GREEN}%d${NC}\n" $(find src -name '*.o' 2>/dev/null | wc -l)
+    printf "${BRIGHT_YELLOW} Executable: ${BRIGHT_GREEN}%s${NC}\n" "$(ls -lh $EXECUTABLE_NAME 2>/dev/null | awk '{print $5}' || echo 'N/A')"
+    printf "${BRIGHT_YELLOW} Build mode: ${BRIGHT_GREEN}%s${NC}\n" "$MODE_TEXT"
     print_colored $BRIGHT_CYAN "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
+
+show_usage() {
+    print_colored $BRIGHT_CYAN "Usage: $0 [OPTIONS]"
+    print_colored $BRIGHT_YELLOW "Options:"
+    print_colored $BRIGHT_WHITE "  -a, --admin    Build admin client instead of server"
+    print_colored $BRIGHT_WHITE "  -h, --help     Show this help message"
+    echo
+}
+
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -a|--admin)
+                ADMIN_MODE=true
+                BUILD_TARGET="admin_client"
+                EXECUTABLE_NAME="admin_client"
+                MODE_TEXT="Admin Client"
+                shift
+                ;;
+            -h|--help)
+                show_usage
+                exit 0
+                ;;
+            *)
+                print_colored $BG_RED$BRIGHT_WHITE$BOLD " Error: Unknown option '$1' "
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
 }
 
 main() {
     local start_time=$(date +%s)
     
-    print_colored $BRIGHT_MAGENTA "${BOLD}Starting SOCKS5 Build Process...${NC}"
+    if [[ "$ADMIN_MODE" == true ]]; then
+        print_colored $BRIGHT_MAGENTA "${BOLD}Starting SOCKS5 Admin Client Build Process...${NC}"
+        print_colored $ORANGE "${BOLD}Building in Administrative Mode${NC}"
+    else
+        print_colored $BRIGHT_MAGENTA "${BOLD}Starting SOCKS5 Build Process...${NC}"
+    fi
     
     print_header "CLEANING BUILD ARTIFACTS"
 
@@ -153,10 +208,14 @@ main() {
     rm -f "$clean_output"
     
     print_header "BUILDING PROJECT"
-    print_colored $BRIGHT_YELLOW "${BOLD}Compiling source files...${NC}"
+    if [[ "$ADMIN_MODE" == true ]]; then
+        print_colored $BRIGHT_YELLOW "${BOLD}Compiling admin client...${NC}"
+    else
+        print_colored $BRIGHT_YELLOW "${BOLD}Compiling source files...${NC}"
+    fi
     echo
     
-    if make all 2>&1 | format_warnings; then
+    if make $BUILD_TARGET 2>&1 | format_warnings; then
         local end_time=$(date +%s)
         echo
         print_colored $BG_GREEN$BRIGHT_WHITE$BOLD " Build completed successfully! "
@@ -165,8 +224,13 @@ main() {
         
         print_ascii_art
         
-        print_colored $BRIGHT_GREEN "${BOLD}Ready to execute: ${BRIGHT_CYAN}./socks5d${NC}"
-        print_colored $BRIGHT_BLUE "${BOLD}Run tests with: ${BRIGHT_CYAN}./test.sh${NC}"
+        if [[ "$ADMIN_MODE" == true ]]; then
+            print_colored $BRIGHT_GREEN "${BOLD}Ready to execute: ${BRIGHT_CYAN}./$EXECUTABLE_NAME${NC}"
+            print_colored $BRIGHT_BLUE "${BOLD}Admin client built successfully!${NC}"
+        else
+            print_colored $BRIGHT_GREEN "${BOLD}Ready to execute: ${BRIGHT_CYAN}./$EXECUTABLE_NAME${NC}"
+            print_colored $BRIGHT_BLUE "${BOLD}Run tests with: ${BRIGHT_CYAN}./test.sh${NC}"
+        fi
         
     else
         print_colored $BG_RED$BRIGHT_WHITE$BOLD " Build failed! "
@@ -175,10 +239,15 @@ main() {
     fi
 }
 
+# Check if Makefile exists
 if [[ ! -f "Makefile" ]]; then
     print_colored $BG_RED$BRIGHT_WHITE$BOLD " Error: Makefile not found in current directory "
     print_colored $BRIGHT_YELLOW "${BOLD}Please run this script from the project root directory${NC}"
     exit 1
 fi
 
-main "$@"
+# Parse command line arguments
+parse_arguments "$@"
+
+# Run main function
+main
