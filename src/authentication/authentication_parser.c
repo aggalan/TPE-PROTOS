@@ -2,8 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "../logging/logger.h"
-#define CRED_FILE  "./src/authentication/users.txt"
-
+#include "admin.h"
 #define AUTH_VERSION_USER_PASS 0x01
 
 
@@ -16,7 +15,6 @@ static AuthState parse_password_length(AuthParser * parser, uint8_t byte);
 static AuthState parse_password(AuthParser * parser, uint8_t byte);
 static AuthState parse_end(AuthParser * parser, uint8_t byte);
 static AuthState parse_error(AuthParser * parser, uint8_t byte);
-static bool verify_credentials(const char *user, const char *pass);
 
 static parse_character parse_functions[] = {
     [AUTH_VERSION] = (parse_character) parse_version,
@@ -27,25 +25,6 @@ static parse_character parse_functions[] = {
     [AUTH_END]     = (parse_character) parse_end,
     [AUTH_ERROR]   = (parse_character) parse_error
 };
-
-
-static bool verify_credentials(const char *user, const char *pass) {
-    FILE *f = fopen(CRED_FILE, "r");
-    if (f == NULL)
-        return false;
-    char fuser[USER_MAX_LEN + 1];
-    char fpass[PASSWORD_MAX_LEN + 1];
-
-    while (fscanf(f, " %15s %15s", fuser, fpass) == 2) {
-    LOG_DEBUG("USERNAME: %s PASSWORD: %s\n",fuser, fpass);
-        if (strcmp(user, fuser) == 0 && strcmp(pass, fpass) == 0) {
-            fclose(f);
-            return true;
-        }
-    }
-    fclose(f);
-    return false;
-}
 
 void init_authentication_parser(AuthParser *parser) {
     if (parser == NULL) return;
@@ -111,7 +90,7 @@ AuthState parse_password(AuthParser * parser, uint8_t byte){
     if(parser->idx == parser->plen){
         parser->idx = 0;
         LOG_DEBUG("Password parsed successfully\n");
-        parser->auth_check = verify_credentials(parser->uname, parser->passwd) ? AUTH_SUCCESS : AUTH_FAILURE;
+        parser->auth_check = validate_user(parser->uname, parser->passwd,USER_FILE) ? AUTH_SUCCESS : AUTH_FAILURE;
         LOG_DEBUG("Checking Authentification: %d\n", parser->auth_check);
         return AUTH_END;
     }
