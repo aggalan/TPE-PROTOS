@@ -20,13 +20,11 @@
 #include "../negotiation/negotiation.h"
 #include "../authentication/authentication.h"
 #include "../request/request.h"
-#include "args.h"
+#include "../args/args.h"
 
 
 #define FD_UPPER_LIMIT 1024
 #define ERROR_CODE -1
-
-
 
 
 static void socksv5_read(struct selector_key *key);
@@ -113,7 +111,6 @@ static const struct state_definition client_actions[] = {
 
 
 
-//@TODO: Agregar Origin (?)
 SocksClient *socks5_new(const int client_fd, const struct sockaddr_storage *client_addr,const socklen_t client_addr_len){
     SocksClient * ret = calloc(1, sizeof(SocksClient));
     if (ret == NULL) goto fail;
@@ -186,7 +183,6 @@ fail:
     {
         close(client);
     }
-//     socks5_destroy(state);
 }
 
 
@@ -224,8 +220,6 @@ static void socksv5_close(struct selector_key *key)
 { 
     struct state_machine* stm = &ATTACHMENT(key)->stm;
     stm_handler_close(stm, key);
-    //TODO: close connection
-
 }
 
 void _closeConnection(struct selector_key *key)
@@ -256,10 +250,6 @@ void _closeConnection(struct selector_key *key)
         freeaddrinfo(data->origin_resolution);
         data->origin_resolution = NULL;
     }
-    //if (data->dest_addr != NULL) {
-    //    free(data->dest_addr);
-    //   data->dest_addr = NULL;
-    //}
     free(data);
 
 }
