@@ -1,5 +1,7 @@
 // admin.c
 #include "admin.h"
+
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -133,20 +135,21 @@ char *admin_list_users(const char *user_file, size_t limit, size_t offset) {
     return out;
 }
 
-int validate_user(const char *username, const char *password, const char *user_file) {
-    if (!username || !password || !user_file) return -1;
+bool validate_user(const char *username, const char *password, const char *user_file) {
+    if (!username || !password || !user_file) return false;
 
     FILE *f = fopen(user_file, "r");
-    if (!f) return -1;
+    if (f == NULL)
+        return false;
+    char fuser[USER_MAX_LEN + 1];
+    char fpass[PASS_MAX + 1];
 
-    char u[256], p[256];
-    while (fscanf(f, "%255s %255s", u, p) == 2) {
-        if (strcmp(u, username) == 0 && strcmp(p, password) == 0) {
+    while (fscanf(f, " %15s %15s", fuser, fpass) == 2) {
+        if (strcmp(username, fuser) == 0 && strcmp(password, fpass) == 0) {
             fclose(f);
-            return 0;
+            return true;
         }
     }
     fclose(f);
-    return -1;
+    return false;
 }
-
