@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "../logging/logger.h"
-#include "admin.h"
+#include "../admin/admin.h"
 #define AUTH_VERSION_USER_PASS 0x01
 
 
@@ -105,10 +105,8 @@ AuthState parse_end(AuthParser * parser, uint8_t byte){
 }
 
 AuthState parse_error(AuthParser * parser, uint8_t byte){
+    (void)byte;
     LOG_DEBUG("parse_error: Error in Authentification. \n");
-    LOG_DEBUG("Received byte: %d\n", byte);
-    LOG_DEBUG("Parser state: %d\n", parser->state);
-    byte = byte; //@TODO: Cambiar cuando se haga Error Handling
     if(parser == NULL) LOG_DEBUG("parse_error: Parser is NULL\n");
     return AUTH_ERROR;
 }
