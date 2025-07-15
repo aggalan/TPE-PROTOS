@@ -14,6 +14,7 @@
 #include <netinet/in.h>
 
 #include "socks5/socks5.h"
+#define MAX_ARG_LEN   1024
 
 static bool mgmt_is_logged_in = false;
 static struct sockaddr_in mgmt_logged_client = {0};
@@ -58,6 +59,10 @@ static void send_data_response(int sockfd, struct sockaddr_in *cli, socklen_t ad
 
 static bool parse_user_pass(const char *args, char *user, char *pass, size_t buf_size) {
     if (!args) return false;
+    size_t len = strlen(args);
+    if (len > 2 * (buf_size - 1) + 1) {
+        return false;
+    }
 
     char fmt[32];
     snprintf(fmt, sizeof(fmt), "%%%zus %%%zus", buf_size - 1, buf_size - 1);
@@ -361,6 +366,11 @@ void mgmt_udp_handle(struct selector_key *key) {
     }
 
     uint16_t payload_len = hdr.length;
+    if (payload_len > MAX_ARG_LEN) {
+        send_simple_response(key->fd, &client_addr, client_len,
+                             hdr.method, MGMT_PAYLOAD_TOO_LONG);
+        return;
+    }
 
     if (n < 6 + payload_len) {
         return;

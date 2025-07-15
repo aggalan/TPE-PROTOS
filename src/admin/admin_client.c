@@ -161,6 +161,9 @@ int main(int argc, char *argv[]) {
             case MGMT_ERR_BUSY:
                 status_msg = "[ERROR] Another admin is logged, please wait.";
                 break;
+            case MGMT_PAYLOAD_TOO_LONG:
+                status_msg = "[ERROR] Payload too long.";
+                break;
             default:
                 status_msg = "[ERROR] Unknown status code.";
                 break;

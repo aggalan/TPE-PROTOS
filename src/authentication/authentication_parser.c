@@ -126,6 +126,6 @@ AuthCodes fill_authentication_answer(AuthParser *p, buffer *b) {
         return AUTH_REPLY_FULL_BUFFER;
     LOG_DEBUG("Filling authentication answer\n");
     buffer_write(b, AUTH_VERSION_USER_PASS);
-    buffer_write(b, (p->auth_check == AUTH_SUCCESS) ? 0x00 : 0x01); // OJO CON LOS MAGIC NUMBERS
+    buffer_write(b, (p->auth_check == AUTH_SUCCESS) ? 0x00 : 0x01); // REP
     return p->auth_check == AUTH_SUCCESS? AUTH_REPLY_OK : AUTH_REPLY_DENIED;
 }

@@ -44,7 +44,8 @@ enum {
     MGMT_ERR_LOGGED_IN = 45,
     MGMT_ERR_EXPIRED   = 46,
     MGMT_ERR_BUSY = 47,
-    MGMT_ERR_INTERNAL  = 50
+    MGMT_ERR_INTERNAL  = 50,
+    MGMT_PAYLOAD_TOO_LONG = 51,
 };
 
 struct mgmt_hdr {
