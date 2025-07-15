@@ -123,7 +123,7 @@ static void handle_login(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
         return;
     }
 
-    if (validate_user(user, pass, ADMIN_FILE) == 0) {
+    if (validate_user(user, pass, ADMIN_FILE)) {
         mgmt_is_logged_in = true;
         memcpy(&mgmt_logged_client, cli, sizeof(struct sockaddr_in));
         mgmt_last_seen = time(NULL);
