@@ -30,3 +30,7 @@ char * metrics_to_string(void) {
     return buffer;
 }
 
+int get_concurrent_connections(void) {
+    return m.concurrent_connections;
+}
+

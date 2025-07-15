@@ -15,5 +15,6 @@ void metrics_new_connection(void);
 void metrics_closed_connection(void);
 void metrics_add_bytes(size_t amount);
 char * metrics_to_string(void);
+int get_concurrent_connections(void);
 
 #endif // METRICS_H
