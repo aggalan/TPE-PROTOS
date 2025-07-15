@@ -126,28 +126,52 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        switch (resp_hdr->method) {
-            case MGMT_LOGIN:
-                if (resp_hdr->status == MGMT_OK_SIMPLE) {
-                    printf("[SUCCESS] Login successful\n");
-                } else if (resp_hdr->status == MGMT_ERR_AUTH) {
-                    printf("[ERROR] Login failed: invalid credentials or session expired\n");
-                } else {
-                    printf("[ERROR] Login failed: unknown status %d\n", resp_hdr->status);
-                }
+        const char *status_msg = NULL;
+        switch (resp_hdr->status) {
+            case MGMT_OK_SIMPLE:
+                status_msg = "[OK] Command executed successfully.";
                 break;
-
+            case MGMT_OK_WITH_DATA:
+                status_msg = "[OK] Command returned data:";
+                break;
+            case MGMT_ERR_SYNTAX:
+                status_msg = "[ERROR] Invalid syntax.";
+                break;
+            case MGMT_ERR_AUTH:
+                status_msg = "[ERROR] Invalid credentials.";
+                break;
+            case MGMT_ERR_NO_AUTH:
+                status_msg = "[ERROR] Unauthorized, you must log in first.";
+                break;
+            case MGMT_ERR_EXPIRED:
+                status_msg = "[ERROR] Session expired. Please log in again.";
+                break;
+            case MGMT_ERR_LOGGED_IN:
+                status_msg = "[ERROR] Already logged in.";
+                break;
+            case MGMT_ERR_NOTFOUND:
+                status_msg = "[ERROR] User or resource not found.";
+                break;
+            case MGMT_ERR_INTERNAL:
+                status_msg = "[ERROR] Internal server error.";
+                break;
+            case MGMT_ERR_NOT_SUPPORTED:
+                status_msg = "[ERROR] Unsupported command or version.";
+                break;
+            case MGMT_ERR_BUSY:
+                status_msg = "[ERROR] Another admin is logged, please wait.";
+                break;
             default:
-                if (resp_hdr->status == MGMT_OK_WITH_DATA) {
-                    char *payload = (char *)(client->buffer + sizeof(struct mgmt_hdr));
-                    payload[bytes_read - sizeof(struct mgmt_hdr)] = '\0';
-                    printf("[DATA] %s\n", payload);
-                } else if (resp_hdr->status == MGMT_OK_SIMPLE) {
-                    printf("[OK] Command executed successfully.\n");
-                } else {
-                    printf("[ERROR] Command failed with status %d\n", resp_hdr->status);
-                }
+                status_msg = "[ERROR] Unknown status code.";
                 break;
+        }
+
+        printf("%s\n", status_msg);
+
+        if (resp_hdr->status == MGMT_OK_WITH_DATA) {
+            char *payload = (char *)(client->buffer + sizeof(struct mgmt_hdr));
+            payload[bytes_read - sizeof(struct mgmt_hdr)] = '\0';
+            puts(payload);
         }
         memset(client->buffer, 0, bytes_read);
         memset(read_buff->buffer, 0, read_buff->amount);

@@ -13,6 +13,8 @@
 #include <errno.h>
 #include <netinet/in.h>
 
+#include "socks5/socks5.h"
+
 static bool mgmt_is_logged_in = false;
 static struct sockaddr_in mgmt_logged_client = {0};
 static time_t mgmt_last_seen = 0;
@@ -71,16 +73,21 @@ static bool check_auth_and_respond(int sockfd, struct sockaddr_in *cli, socklen_
                                    uint8_t method) {
 
     if (mgmt_is_logged_in && time(NULL) - mgmt_last_seen > MGMT_TIMEOUT) {
-        mgmt_is_logged_in = false;
-        memset(&mgmt_logged_client, 0, sizeof(mgmt_logged_client));
+        if (is_same_client(cli, &mgmt_logged_client)) {
+            mgmt_is_logged_in = false;
+            memset(&mgmt_logged_client, 0, sizeof(mgmt_logged_client));
+            send_simple_response(sockfd, cli, addrlen, method, MGMT_ERR_EXPIRED);
+            return false;
+        } else {
+            mgmt_is_logged_in = false;
+            memset(&mgmt_logged_client, 0, sizeof(mgmt_logged_client));
+            send_simple_response(sockfd, cli, addrlen, method, MGMT_ERR_NO_AUTH);
+            return false;
+        }
     }
 
-    if (!mgmt_is_logged_in) {
-        send_simple_response(sockfd, cli, addrlen, method, MGMT_ERR_AUTH);
-        return false;
-    }
-    if (!is_same_client(cli, &mgmt_logged_client)) {
-        send_simple_response(sockfd, cli, addrlen, method, MGMT_ERR_AUTH);
+    if (!mgmt_is_logged_in || !is_same_client(cli, &mgmt_logged_client)) {
+        send_simple_response(sockfd, cli, addrlen, method, MGMT_ERR_NO_AUTH);
         return false;
     }
 
@@ -90,19 +97,19 @@ static bool check_auth_and_respond(int sockfd, struct sockaddr_in *cli, socklen_
 static void handle_login(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
                          const char *args) {
 
-    if (mgmt_is_logged_in) {
+    if (mgmt_is_logged_in && time(NULL) - mgmt_last_seen > MGMT_TIMEOUT) {
+        mgmt_is_logged_in = false;
+        memset(&mgmt_logged_client, 0, sizeof(mgmt_logged_client));
+    }
 
-        if (time(NULL) - mgmt_last_seen > MGMT_TIMEOUT) {
-            mgmt_is_logged_in = false;
-            memset(&mgmt_logged_client, 0, sizeof(mgmt_logged_client));
-        }
-        else if (!is_same_client(cli, &mgmt_logged_client)) {
-            send_simple_response(sockfd, cli, addrlen, MGMT_LOGIN, MGMT_ERR_AUTH);
-            return;
-            } else {
-                send_simple_response(sockfd, cli, addrlen, MGMT_LOGIN, MGMT_ERR_AUTH);
-                return;
-            }
+    if (mgmt_is_logged_in && !is_same_client(cli, &mgmt_logged_client)) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_LOGIN, MGMT_ERR_BUSY);
+        return;
+    }
+
+    if (mgmt_is_logged_in) {
+        send_simple_response(sockfd, cli, addrlen, MGMT_LOGIN, MGMT_ERR_LOGGED_IN);
+        return;
     }
 
     char user[64], pass[64];
@@ -111,7 +118,7 @@ static void handle_login(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
         return;
     }
 
-    if (validate_user(user,pass,ADMIN_FILE) == 0) {
+    if (validate_user(user, pass, ADMIN_FILE) == 0) {
         mgmt_is_logged_in = true;
         memcpy(&mgmt_logged_client, cli, sizeof(struct sockaddr_in));
         mgmt_last_seen = time(NULL);
@@ -120,7 +127,6 @@ static void handle_login(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
         send_simple_response(sockfd, cli, addrlen, MGMT_LOGIN, MGMT_ERR_AUTH);
     }
 }
-
 static void handle_logout(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
                           const char *args) {
     (void)args;
@@ -350,7 +356,7 @@ void mgmt_udp_handle(struct selector_key *key) {
     hdr.reserved = buffer[5];
 
     if (hdr.version != MGMT_VERSION) {
-        send_simple_response(key->fd, &client_addr, client_len, hdr.method, MGMT_ERR_SYNTAX);
+        send_simple_response(key->fd, &client_addr, client_len, hdr.method, MGMT_ERR_NOT_SUPPORTED);
         return;
     }
 
