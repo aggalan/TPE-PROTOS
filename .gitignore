@@ -2,3 +2,4 @@ build.sh
 *.o
 *.d
 main
+socks5d

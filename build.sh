@@ -189,8 +189,8 @@ main() {
         # Show ASCII art
         print_ascii_art
         
-        print_colored $BRIGHT_GREEN "${BOLD}Ready to execute: ${BRIGHT_CYAN}./main${NC}"
-        print_colored $BRIGHT_BLUE "${BOLD}Run tests with: ${BRIGHT_CYAN}make test${NC}"
+        print_colored $BRIGHT_GREEN "${BOLD}Ready to execute: ${BRIGHT_CYAN}./socks5d${NC}"
+        print_colored $BRIGHT_BLUE "${BOLD}Run tests with: ${BRIGHT_CYAN}./test.sh${NC}"
         
     else
         print_colored $BG_RED$BRIGHT_WHITE$BOLD " Build failed! "
@@ -205,6 +205,3 @@ if [[ ! -f "Makefile" ]]; then
     print_colored $BRIGHT_YELLOW "${BOLD}Please run this script from the project root directory${NC}"
     exit 1
 fi
-
-# Run the main function
-main "$@"
