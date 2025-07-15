@@ -30,8 +30,6 @@ else
 endif
 
 ifeq ($(SANITIZE),1)
-  CFLAGS  += -fsanitize=address -fno-omit-frame-pointer -g
-  LDFLAGS += -fsanitize=address
 endif
 
 
