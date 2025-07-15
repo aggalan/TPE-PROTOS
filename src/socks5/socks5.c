@@ -279,6 +279,7 @@ void socksv5_done(const unsigned state, struct selector_key * key)
 }
 
 void socksv5_error(const unsigned state, struct selector_key * key){
+    (void)state;
     LOG_DEBUG("Socks error (state: %u)\n", state);
     metrics_closed_connection();
     
