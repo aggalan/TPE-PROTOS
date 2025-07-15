@@ -166,7 +166,7 @@ main() {
         print_ascii_art
         
         print_colored $BRIGHT_GREEN "${BOLD}Ready to execute: ${BRIGHT_CYAN}./socks5d${NC}"
-        print_colored $BRIGHT_BLUE "${BOLD}Run tests with: ${BRIGHT_CYAN}./test${NC}"
+        print_colored $BRIGHT_BLUE "${BOLD}Run tests with: ${BRIGHT_CYAN}./test.sh${NC}"
         
     else
         print_colored $BG_RED$BRIGHT_WHITE$BOLD " Build failed! "
