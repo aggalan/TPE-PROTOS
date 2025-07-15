@@ -99,9 +99,8 @@ NegState parse_end(NegParser * parser, uint8_t byte){
 }
 
 
-
 bool has_negotiation_read_ended(NegParser * parser){
-    LOG_INFO("Checking if negotiation read has ended...\n");
+    LOG_DEBUG("Checking if negotiation read has ended...\n");
     if(parser == NULL) return false;
     return parser->state == NEG_END;
 }
