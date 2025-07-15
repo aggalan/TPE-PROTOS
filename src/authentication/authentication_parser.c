@@ -110,7 +110,7 @@ AuthState parse_error(AuthParser * parser, uint8_t byte){
 }
 
 bool has_authentication_read_ended(AuthParser *p) {
-    return p != NULL && p->state == AUTH_END || p!= NULL && p->state == AUTH_ERROR;
+    return (p != NULL && p->state == AUTH_END) || (p!= NULL && p->state == AUTH_ERROR);
 }
 
 bool has_authentication_errors(AuthParser *p) {
