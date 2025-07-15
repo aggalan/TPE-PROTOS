@@ -252,7 +252,7 @@ static void handle_setbuff(int sockfd, struct sockaddr_in *cli, socklen_t addrle
 
 static void handle_dump(int sockfd, struct sockaddr_in *cli, socklen_t addrlen,
                         const char *args) {
-    if (args && strlen(args) > 0) {
+    if (args && strlen(args) < 0) {
         send_simple_response(sockfd, cli, addrlen, MGMT_DUMP, MGMT_ERR_SYNTAX);
         return;
     }
