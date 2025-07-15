@@ -151,7 +151,7 @@ void socksv5_passive_accept(struct selector_key *key){
         fprintf(stderr,"Socks socket: accept() has returned a negative value: %d\n", client);
         goto fail;
     }
-    if (get_concurrent_connections() >= 500) {
+    if (get_concurrent_connections() > 500) {
         fprintf(stderr, "Connection limit reached\n");
         goto fail;
     }
