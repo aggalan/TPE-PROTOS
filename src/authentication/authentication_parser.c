@@ -91,14 +91,12 @@ AuthState parse_password(AuthParser * parser, uint8_t byte){
         parser->idx = 0;
         LOG_DEBUG("Password parsed successfully\n");
         parser->auth_check = validate_user(parser->uname, parser->passwd,USER_FILE) ? AUTH_SUCCESS : AUTH_FAILURE;
-        LOG_DEBUG("Checking Authentification: %d\n", parser->auth_check);
         return AUTH_END;
     }
     return PASSWORD;
 }
 
 AuthState parse_end(AuthParser * parser, uint8_t byte){
-    LOG_DEBUG("parse_end: Authentification has ended. \n");
     LOG_DEBUG("Received byte: %d\n", byte);
     LOG_DEBUG("Parser state: %d\n", parser->state);
     return parser != NULL && parser->state == AUTH_END && byte==0;
@@ -112,7 +110,7 @@ AuthState parse_error(AuthParser * parser, uint8_t byte){
 }
 
 bool has_authentication_read_ended(AuthParser *p) {
-    return p != NULL && p->state == AUTH_END;
+    return p != NULL && p->state == AUTH_END || p!= NULL && p->state == AUTH_ERROR;
 }
 
 bool has_authentication_errors(AuthParser *p) {
